@@ -28,10 +28,11 @@ export default function EPSChart({ data }: EPSChartProps) {
       },
     },
     grid: { left: "3%", right: "4%", bottom: "3%", containLabel: true },
-    xAxis: { type: "category" as const, data: reversed.map((d) => d.fiscalYear) },
+    xAxis: { type: "category" as const, data: reversed.map((d) => d.fiscalYear), axisLabel: { color: "#a0a0a0" } },
     yAxis: {
       type: "value" as const,
-      axisLabel: { formatter: (val: number) => `$${val}` },
+      axisLabel: { formatter: (val: number) => `$${val}`, color: "#a0a0a0" },
+      splitLine: { lineStyle: { color: "#2a2a2a" } },
     },
     series: [
       {
@@ -57,9 +58,9 @@ export default function EPSChart({ data }: EPSChartProps) {
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-sm">
-      <h3 className="text-sm font-medium text-gray-600 mb-2">EPS 每股收益趋势</h3>
-      <ReactECharts option={option} style={{ height: "280px" }} />
+    <div className="bg-[#141414] p-4 rounded-lg border border-[#2a2a2a]">
+      <h3 className="text-sm font-medium text-gray-400 mb-2">EPS 每股收益趋势</h3>
+      <ReactECharts option={option} style={{ height: "280px" }} theme="dark" />
     </div>
   );
 }

@@ -11,23 +11,20 @@
 
 export default function CompanyLoading() {
   return (
-    <div className="min-h-screen bg-gray-50 animate-pulse">
+    <div className="min-h-screen bg-[#0a0a0a] animate-pulse">
       {/* 顶部骨架 */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-[#141414] border-b border-[#2a2a2a]">
         <div className="max-w-5xl mx-auto px-4 py-6">
           <div className="flex items-center gap-4">
             {/* Logo 占位 */}
-            <div className="w-16 h-16 bg-gray-200 rounded-lg" />
+            <div className="w-16 h-16 bg-[#2a2a2a] rounded-lg" />
             <div className="flex-1">
-              {/* 公司名占位 */}
-              <div className="h-7 bg-gray-200 rounded w-48 mb-2" />
-              {/* 行业信息占位 */}
-              <div className="h-4 bg-gray-200 rounded w-64" />
+              <div className="h-7 bg-[#2a2a2a] rounded w-48 mb-2" />
+              <div className="h-4 bg-[#2a2a2a] rounded w-64" />
             </div>
-            {/* 股价占位 */}
             <div className="text-right">
-              <div className="h-7 bg-gray-200 rounded w-24 mb-2" />
-              <div className="h-4 bg-gray-200 rounded w-20" />
+              <div className="h-7 bg-[#2a2a2a] rounded w-24 mb-2" />
+              <div className="h-4 bg-[#2a2a2a] rounded w-20" />
             </div>
           </div>
         </div>
@@ -37,12 +34,12 @@ export default function CompanyLoading() {
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
         {/* 关键指标卡片骨架 */}
         <section>
-          <div className="h-5 bg-gray-200 rounded w-32 mb-4" />
+          <div className="h-5 bg-[#2a2a2a] rounded w-32 mb-4" />
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="bg-white p-4 rounded-lg shadow-sm border">
-                <div className="h-4 bg-gray-200 rounded w-20 mb-2" />
-                <div className="h-6 bg-gray-200 rounded w-16" />
+              <div key={i} className="bg-[#141414] p-4 rounded-lg border border-[#2a2a2a]">
+                <div className="h-4 bg-[#2a2a2a] rounded w-20 mb-2" />
+                <div className="h-6 bg-[#2a2a2a] rounded w-16" />
               </div>
             ))}
           </div>
@@ -50,19 +47,19 @@ export default function CompanyLoading() {
 
         {/* 图表区域骨架 */}
         <section>
-          <div className="h-5 bg-gray-200 rounded w-32 mb-4" />
+          <div className="h-5 bg-[#2a2a2a] rounded w-32 mb-4" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white p-4 rounded-lg shadow-sm h-[300px]" />
-            <div className="bg-white p-4 rounded-lg shadow-sm h-[300px]" />
+            <div className="bg-[#141414] p-4 rounded-lg border border-[#2a2a2a] h-[300px]" />
+            <div className="bg-[#141414] p-4 rounded-lg border border-[#2a2a2a] h-[300px]" />
           </div>
         </section>
 
         {/* 表格骨架 */}
         <section>
-          <div className="h-5 bg-gray-200 rounded w-40 mb-4" />
-          <div className="bg-white rounded-lg shadow-sm p-4 space-y-3">
+          <div className="h-5 bg-[#2a2a2a] rounded w-40 mb-4" />
+          <div className="bg-[#141414] rounded-lg border border-[#2a2a2a] p-4 space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-8 bg-gray-200 rounded" />
+              <div key={i} className="h-8 bg-[#2a2a2a] rounded" />
             ))}
           </div>
         </section>

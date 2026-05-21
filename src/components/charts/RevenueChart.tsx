@@ -39,17 +39,19 @@ export default function RevenueChart({ data }: RevenueChartProps) {
       },
     },
     // 图例
-    legend: { data: ["营收", "净利润"], top: 0 },
+    legend: { data: ["营收", "净利润"], top: 0, textStyle: { color: "#a0a0a0" } },
     // 网格（留出边距）
     grid: { left: "3%", right: "4%", bottom: "3%", containLabel: true },
     // X轴：年份
-    xAxis: { type: "category" as const, data: reversed.map((d) => d.fiscalYear) },
+    xAxis: { type: "category" as const, data: reversed.map((d) => d.fiscalYear), axisLabel: { color: "#a0a0a0" } },
     // Y轴：金额（自动格式化为B）
     yAxis: {
       type: "value" as const,
       axisLabel: {
         formatter: (val: number) => `$${(val / 1_000_000_000).toFixed(0)}B`,
+        color: "#a0a0a0",
       },
+      splitLine: { lineStyle: { color: "#2a2a2a" } },
     },
     // 数据系列
     series: [
@@ -69,9 +71,9 @@ export default function RevenueChart({ data }: RevenueChartProps) {
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-sm">
-      <h3 className="text-sm font-medium text-gray-600 mb-2">营收与净利润趋势</h3>
-      <ReactECharts option={option} style={{ height: "280px" }} />
+    <div className="bg-[#141414] p-4 rounded-lg border border-[#2a2a2a]">
+      <h3 className="text-sm font-medium text-gray-400 mb-2">营收与净利润趋势</h3>
+      <ReactECharts option={option} style={{ height: "280px" }} theme="dark" />
     </div>
   );
 }
