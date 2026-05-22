@@ -57,20 +57,7 @@ export default function HomePage() {
       {/* ══ Section 1: Hero ══ */}
       <section id="hero" ref={heroRef} className="relative min-h-screen flex items-center justify-center">
         <VideoBackground src={VIDEO_HERO} />
-        {/* 网格线装饰 */}
-        <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)", backgroundSize: "80px 80px" }} />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black to-transparent" />
-        {/* 浮动小视频窗口装饰 */}
-        <div className="absolute bottom-24 right-8 w-48 h-28 rounded-xl overflow-hidden border border-white/10 shadow-2xl hidden lg:block opacity-70">
-          <video autoPlay muted loop playsInline preload="none" className="w-full h-full object-cover">
-            <source src={VIDEO_MID} type="video/mp4" />
-          </video>
-        </div>
-        {/* 滚动指示器 */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-10">
-          <span className="text-xs text-zinc-500 uppercase tracking-widest">SCROLL</span>
-          <div className="w-px h-8 bg-zinc-700 relative overflow-hidden"><div className="w-full h-3 bg-white/60 animate-bounce" /></div>
-        </div>
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
           <div className="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 mb-8">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -118,8 +105,7 @@ export default function HomePage() {
       <Marquee items={["AAPL","MSFT","NVDA","GOOGL","AMZN","TSLA","META","JPM","V","JNJ","BRK.B","UNH"]} speed={30} className="py-5 text-white/15 text-2xl font-bold border-y border-zinc-800/50" />
 
       {/* ══ Section 3: 功能展示 2x2 ══ */}
-      <section id="features" ref={featRef} className="relative py-32 px-4 overflow-hidden">
-        <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full bg-blue-500/10 blur-[100px] pointer-events-none" />
+      <section id="features" ref={featRef} className="relative py-32 px-4">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-4">核心功能</h2>
           <p className="text-zinc-400 text-center mb-16 text-lg">从数据到洞察，一站式解决</p>
@@ -155,9 +141,8 @@ export default function HomePage() {
       </section>
 
       {/* ══ Section 5: CTA ══ */}
-      <section id="cta" className="relative py-32 text-center px-4 overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-purple-500/10 blur-[120px] pointer-events-none" />
-        <div className="relative z-10">
+      <section id="cta" className="py-32 text-center px-4">
+        <div>
           <h2 className="text-4xl md:text-6xl font-bold mb-6">准备好更聪明地投资了吗？</h2>
           <p className="text-zinc-400 text-lg mb-10 max-w-xl mx-auto">从财报到投资决策，只需几秒</p>
           <MagneticButton href="/company/AAPL"><span className="inline-flex px-10 py-5 bg-white text-black rounded-full font-medium text-lg">免费体验</span></MagneticButton>
