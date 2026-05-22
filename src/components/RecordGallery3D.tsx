@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
 const CARDS = [
@@ -24,22 +24,21 @@ export default function RecordGallery3D() {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const handler = (e: WheelEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-    };
+    const handler = (e: WheelEvent) => { e.preventDefault(); e.stopPropagation(); };
     el.addEventListener("wheel", handler, { passive: false });
     return () => el.removeEventListener("wheel", handler);
   }, []);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center py-16" style={{ background: "#F5F4F0" }}>
-      <div ref={containerRef} data-lenis-prevent className="relative flex flex-col items-center" style={{ perspective: "750px", perspectiveOrigin: "center 50%" }}>
+      <div ref={containerRef} data-lenis-prevent className="relative flex flex-col items-center gap-[3px]"
+        style={{ perspective: "750px", perspectiveOrigin: "center bottom", transformStyle: "preserve-3d" }}>
         {CARDS.map((card, index) => {
           const isActive = index === activeIndex;
+          const zLayer = CARDS.length - index; // 第1张z最高
           const transform = isActive
             ? "rotateX(10deg) rotate(-2.5deg) translateZ(60px)"
-            : "rotateX(16deg)";
+            : `rotateX(16deg) translateZ(${zLayer}px)`;
           return (
             <div
               key={card.symbol}
@@ -47,24 +46,24 @@ export default function RecordGallery3D() {
               onMouseLeave={() => setActiveIndex(null)}
               className="relative"
               style={{
-                width: "620px",
+                width: "650px",
+                height: isActive ? "auto" : "50px",
                 transform,
                 transformOrigin: "center bottom",
-                transformStyle: "preserve-3d",
                 transition: "all 0.4s cubic-bezier(0.22, 1, 0.36, 1)",
-                zIndex: isActive ? 50 : 10,
-                marginBottom: isActive ? "15px" : "-22px",
+                zIndex: isActive ? 50 : zLayer,
                 marginTop: isActive ? "15px" : "0",
+                marginBottom: isActive ? "15px" : "0",
+                borderRadius: "12px",
                 border: isActive ? "1.5px solid rgba(255,255,255,0.6)" : "none",
-                borderTop: isActive ? "1.5px solid rgba(255,255,255,0.6)" : "1px solid rgba(255,255,255,0.08)",
-                borderRadius: isActive ? "12px" : "10px",
-                boxShadow: isActive ? "0 15px 50px rgba(0,0,0,0.4)" : "0 4px 12px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2)",
+                borderTop: isActive ? "1.5px solid rgba(255,255,255,0.6)" : "1px solid rgba(255,255,255,0.06)",
+                boxShadow: isActive ? "0 20px 60px rgba(0,0,0,0.4)" : "0 4px 12px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2)",
+                background: "linear-gradient(180deg, #1f1f1f 0%, #141414 100%)",
+                overflow: "hidden",
               }}
             >
-              {/* 表面渐变光泽 */}
-              <div className="absolute inset-0 rounded-[inherit] pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 40%)" }} />
               {isActive ? (
-                <div className="bg-[#1a1a1a] rounded-xl p-5 flex gap-5 items-start relative overflow-hidden">
+                <div className="p-5 flex gap-5 items-start">
                   <img src={card.image} alt={card.name} className="w-20 h-20 rounded-lg object-cover shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-white/50 text-xs font-mono mb-0.5">{card.symbol}</p>
@@ -77,9 +76,10 @@ export default function RecordGallery3D() {
                   </div>
                 </div>
               ) : (
-                <div className="bg-[#1a1a1a] h-[46px] rounded-[10px] flex items-center px-4 gap-3 relative overflow-hidden">
+                <div className="h-[50px] flex items-center px-5 gap-3">
                   <img src={card.image} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
                   <span className="text-white/90 text-sm font-medium truncate">{card.name}</span>
+                  <span className="text-white/30 text-xs font-mono">{card.symbol}</span>
                   <div className="ml-auto flex gap-1.5">
                     {card.tags.map(t => (<span key={t} className="px-2 py-0.5 text-[9px] rounded-full bg-white/5 text-white/40">{t}</span>))}
                   </div>
