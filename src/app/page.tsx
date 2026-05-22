@@ -70,6 +70,17 @@ export default function HomePage() {
         {/* 网格线装饰 */}
         <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)", backgroundSize: "80px 80px" }} />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black to-transparent" />
+        {/* 浮动小视频窗口装饰 */}
+        <div className="absolute bottom-24 right-8 w-48 h-28 rounded-xl overflow-hidden border border-white/10 shadow-2xl hidden lg:block opacity-70">
+          <video autoPlay muted loop playsInline preload="none" className="w-full h-full object-cover">
+            <source src={VIDEO_MID} type="video/mp4" />
+          </video>
+        </div>
+        {/* 滚动指示器 */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-10">
+          <span className="text-xs text-zinc-500 uppercase tracking-widest">SCROLL</span>
+          <div className="w-px h-8 bg-zinc-700 relative overflow-hidden"><div className="w-full h-3 bg-white/60 animate-bounce" /></div>
+        </div>
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
           <div className="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 mb-8">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -132,8 +143,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 渐变分隔 */}
-      <div className="w-full h-px bg-gradient-to-r from-transparent via-zinc-700 to-transparent" />
+      {/* Marquee 信任条 */}
+      <Marquee items={["AAPL","MSFT","NVDA","GOOGL","AMZN","TSLA","META","JPM","V","JNJ","BRK.B","UNH"]} speed={30} className="py-5 text-white/15 text-2xl font-bold border-y border-zinc-800/50" />
 
       {/* ══ Section 3: 功能展示 2x2 ══ */}
       <section id="features" ref={featRef} className="relative py-32 px-4 overflow-hidden">
