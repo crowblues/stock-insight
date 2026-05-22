@@ -16,14 +16,7 @@ const companies = [
 
 export default function CompanyCarousel() {
   return (
-    <section className="py-24 bg-black">
-      <div className="max-w-7xl mx-auto px-4">
-        <h2 className="text-4xl md:text-5xl font-bold text-white text-center mb-4">
-          Global Market Leaders
-        </h2>
-        <p className="text-zinc-400 text-center mb-16 text-lg">
-          Track the world&apos;s most influential companies
-        </p>
+    <div className="w-full">
         <Swiper
           modules={[EffectCoverflow, Autoplay, Navigation]}
           effect="coverflow"
@@ -57,7 +50,6 @@ export default function CompanyCarousel() {
             </SwiperSlide>
           ))}
         </Swiper>
-      </div>
-    </section>
+    </div>
   );
 }
