@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, lazy, Suspense } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/lib/gsap";
 import Link from "next/link";
@@ -8,6 +8,8 @@ import MagneticButton from "@/components/MagneticButton";
 import SideNav from "@/components/SideNav";
 import Marquee from "@/components/Marquee";
 import StackedCompanyCards from "@/components/StackedCompanyCards";
+
+const ShaderDissolve = lazy(() => import("@/components/ShaderDissolve"));
 
 interface SearchResult { symbol: string; name: string; exchange: string; }
 
@@ -47,6 +49,9 @@ export default function HomePage() {
   return (
     <main className="bg-black text-white">
       <SideNav />
+      <Suspense fallback={null}>
+        <ShaderDissolve triggerSelector="#companies" color={[0.15, 0.35, 0.9]} />
+      </Suspense>
 
       {/* ══ Section 1: Hero - 电影感视频背景 ══ */}
       <section id="hero" ref={heroRef} className="relative min-h-screen flex items-center justify-center overflow-hidden">
