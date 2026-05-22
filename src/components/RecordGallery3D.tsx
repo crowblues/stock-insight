@@ -324,25 +324,37 @@ export default function RecordGallery3D() {
                 if (event.target === event.currentTarget) setActiveIndex(null);
               }}
             >
-              {layout.map(({ card, index, slot, y, width }) => (
-                <button
-                  key={card.symbol}
-                  type="button"
-                  className="absolute cursor-pointer bg-transparent"
-                  style={{
-                    left: "50%",
-                    top: `calc(50% + ${y + 4}px)`,
-                    width: `${Math.max(170, width - 18)}px`,
-                    height: "48px",
-                    transform: "translate(-50%, -50%)",
-                    zIndex: slot + 1,
-                  }}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onMouseMove={() => setActiveIndex(index)}
-                  onFocus={() => setActiveIndex(index)}
-                  onClick={() => router.push(`/company/${card.symbol}`)}
-                />
-              ))}
+              {layout.map(({ card, index, slot, y, width }) => {
+                const isActive = index === activeIndex;
+                const isFrontCard = slot === VISIBLE_COUNT - 1;
+                const hitY = y + (isFrontCard ? (isActive ? 82 : 36) : 4);
+                const hitWidth = Math.max(170, width + (isFrontCard ? (isActive ? 140 : 70) : -18));
+                const hitHeight = isFrontCard ? (isActive ? 132 : 82) : 48;
+
+                return (
+                  <button
+                    key={card.symbol}
+                    data-card-symbol={card.symbol}
+                    type="button"
+                    className="absolute cursor-pointer bg-transparent"
+                    style={{
+                      appearance: "none",
+                      border: 0,
+                      left: "50%",
+                      top: `calc(50% + ${hitY}px)`,
+                      width: `${hitWidth}px`,
+                      height: hitHeight,
+                      padding: 0,
+                      transform: "translate(-50%, -50%)",
+                      zIndex: slot + 1,
+                    }}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    onMouseMove={() => setActiveIndex(index)}
+                    onFocus={() => setActiveIndex(index)}
+                    onClick={() => router.push(`/company/${card.symbol}`)}
+                  />
+                );
+              })}
             </div>
           </div>
         </div>
