@@ -2,18 +2,12 @@
 
 import { useState, useRef } from "react";
 import { useGSAP } from "@gsap/react";
-import { gsap, ScrollTrigger } from "@/lib/gsap";
+import { gsap } from "@/lib/gsap";
 import Link from "next/link";
-import Image from "next/image";
-import VideoBackground from "@/components/VideoBackground";
 import MagneticButton from "@/components/MagneticButton";
 import SideNav from "@/components/SideNav";
 import Marquee from "@/components/Marquee";
 import StackedCompanyCards from "@/components/StackedCompanyCards";
-
-const VIDEO_HERO = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260207_050933_33e2620d-09cd-43a2-80ef-4cdbb42f4194.mp4";
-const VIDEO_MID = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260329_050842_be71947f-f16e-4a14-810c-06e83d23ddb5.mp4";
-
 
 interface SearchResult { symbol: string; name: string; exchange: string; }
 
@@ -54,38 +48,48 @@ export default function HomePage() {
     <main className="bg-black text-white">
       <SideNav />
 
-      {/* ══ Section 1: Hero ══ */}
-      <section id="hero" ref={heroRef} className="relative min-h-screen flex items-center justify-center">
-        <VideoBackground src={VIDEO_HERO} />
+      {/* ══ Section 1: Hero - CSS动画背景 ══ */}
+      <section id="hero" ref={heroRef} className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* 动画网格背景 */}
+        <div className="absolute inset-0 bg-[#0a0a0f]">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-purple-900/15 via-transparent to-transparent" />
+          <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
+          {/* 浮动光球 */}
+          <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-blue-500/5 blur-[100px] animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-purple-500/5 blur-[100px] animate-pulse" style={{ animationDelay: "2s" }} />
+        </div>
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black to-transparent" />
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          <div className="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 mb-8">
+          <div className="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 mb-8">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-sm text-zinc-300">Real-Time 市场数据</span>
+            <span className="text-sm text-zinc-300">Real-Time Market Data</span>
           </div>
-          <h1 className="hero-title text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[0.95] mb-6">洞察数字背后的<br/>真相</h1>
-          <p className="hero-sub text-lg md:text-xl text-zinc-300 max-w-2xl mx-auto mb-10">专业级财务数据分析，为每一位投资者而生</p>
+          <h1 className="hero-title text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[0.95] mb-6">
+            洞察数字背后的<br/><span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">真相</span>
+          </h1>
+          <p className="hero-sub text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-10">专业级财务数据分析，为每一位投资者而生</p>
           <div className="flex gap-4 justify-center flex-wrap mb-10">
-            <MagneticButton href="#companies"><span className="hero-cta px-8 py-4 bg-white text-black rounded-full font-medium inline-block">开始探索</span></MagneticButton>
-            <MagneticButton href="#features"><span className="hero-cta px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full font-medium inline-block">了解更多</span></MagneticButton>
+            <MagneticButton href="#companies"><span className="hero-cta px-8 py-4 bg-white text-black rounded-full font-medium inline-block hover:bg-zinc-100 transition-colors">开始探索</span></MagneticButton>
+            <MagneticButton href="#features"><span className="hero-cta px-8 py-4 bg-white/5 backdrop-blur-sm border border-white/15 rounded-full font-medium inline-block hover:bg-white/10 transition-colors">了解更多</span></MagneticButton>
           </div>
           {/* 搜索 */}
           <div className="w-full max-w-xl mx-auto">
             <div className="flex gap-2">
-              <input type="text" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={handleKeyDown} placeholder="输入股票代码或公司名称..." className="flex-1 px-5 py-4 bg-white/10 backdrop-blur border border-white/20 rounded-xl text-white text-lg placeholder-white/40 focus:outline-none focus:border-blue-400 transition-colors" />
-              <button onClick={handleSearch} disabled={loading} className="px-6 py-4 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-500 transition-colors">{loading ? "..." : "搜索"}</button>
+              <input type="text" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={handleKeyDown} placeholder="输入股票代码或公司名称..." className="flex-1 px-5 py-4 bg-white/5 backdrop-blur border border-white/10 rounded-xl text-white text-lg placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all" />
+              <button onClick={handleSearch} disabled={loading} className="px-6 py-4 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-500 transition-colors disabled:opacity-50">{loading ? "..." : "搜索"}</button>
             </div>
             {searched && results.length > 0 && (
-              <div className="mt-3 bg-zinc-900/95 backdrop-blur border border-zinc-700 rounded-xl overflow-hidden text-left">
+              <div className="mt-3 bg-zinc-900/95 backdrop-blur border border-zinc-700/50 rounded-xl overflow-hidden text-left shadow-2xl">
                 {results.slice(0, 6).map(item => (
-                  <Link key={item.symbol} href={`/company/${item.symbol}`} className="flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors border-b border-zinc-800 last:border-b-0">
+                  <Link key={item.symbol} href={`/company/${item.symbol}`} className="flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors border-b border-zinc-800/50 last:border-b-0">
                     <div><span className="font-bold text-blue-400 mr-2">{item.symbol}</span><span className="text-zinc-300">{item.name}</span></div>
                     <span className="text-sm text-zinc-500">{item.exchange}</span>
                   </Link>
                 ))}
               </div>
             )}
-            {searched && !results.length && !loading && <p className="mt-3 text-white/50">未找到匹配的公司</p>}
+            {searched && !results.length && !loading && <p className="mt-3 text-white/40 text-sm">未找到匹配的公司</p>}
           </div>
         </div>
       </section>
@@ -103,13 +107,17 @@ export default function HomePage() {
           <p className="text-zinc-400 text-center mb-16 text-lg">从数据到洞察，一站式解决</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { icon: "📊", title: "实时数据", desc: "覆盖全球 70+ 交易所的 Real-Time 行情，秒级更新", gradient: "from-blue-600 to-cyan-500" },
-              { icon: "🤖", title: "AI 分析", desc: "智能驱动的财务洞察与趋势预测，发现隐藏机会", gradient: "from-purple-600 to-pink-500" },
-              { icon: "📈", title: "可视化报告", desc: "交互式图表，让复杂数据讲出清晰的故事", gradient: "from-emerald-600 to-teal-500" },
-              { icon: "🌍", title: "全球覆盖", desc: "10,000+ 上市公司深度财务数据，跨市场对比", gradient: "from-orange-600 to-amber-500" },
+              { icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z", title: "实时数据", desc: "覆盖全球 70+ 交易所的 Real-Time 行情，秒级更新", gradient: "from-blue-600 to-cyan-500" },
+              { icon: "M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z", title: "AI 分析", desc: "智能驱动的财务洞察与趋势预测，发现隐藏机会", gradient: "from-purple-600 to-pink-500" },
+              { icon: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6", title: "可视化报告", desc: "交互式图表，让复杂数据讲出清晰的故事", gradient: "from-emerald-600 to-teal-500" },
+              { icon: "M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z", title: "全球覆盖", desc: "10,000+ 上市公司深度财务数据，跨市场对比", gradient: "from-orange-600 to-amber-500" },
             ].map(f => (
-              <div key={f.title} className="feat-card p-8 rounded-2xl bg-zinc-900/50 backdrop-blur border border-zinc-800 hover:border-zinc-600 transition-colors group">
-                <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${f.gradient} flex items-center justify-center text-2xl mb-5`}>{f.icon}</div>
+              <div key={f.title} className="feat-card p-8 rounded-2xl bg-zinc-900/50 backdrop-blur border border-zinc-800/80 hover:border-zinc-600 transition-all duration-300 group hover:bg-zinc-800/50">
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${f.gradient} flex items-center justify-center mb-5`}>
+                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d={f.icon} />
+                  </svg>
+                </div>
                 <h3 className="text-xl font-bold text-white mb-3 group-hover:text-blue-400 transition-colors">{f.title}</h3>
                 <p className="text-zinc-400 leading-relaxed">{f.desc}</p>
               </div>
@@ -118,16 +126,19 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══ Section 4: 数据统计 + 视频 ══ */}
-      <section id="stats" className="relative py-40 min-h-[80vh] flex items-center">
-        <VideoBackground src={VIDEO_MID} />
+      {/* ══ Section 4: 数据统计 ══ */}
+      <section id="stats" className="relative py-40 min-h-[70vh] flex items-center overflow-hidden">
+        <div className="absolute inset-0 bg-[#0a0a0f]">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-900/20 via-transparent to-transparent" />
+          <div className="absolute inset-0" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
+        </div>
         <div className="relative z-10 w-full max-w-6xl mx-auto px-4">
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-16">数据说话</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div><div className="text-4xl md:text-5xl font-bold mb-2">10,000+</div><div className="text-zinc-400">覆盖公司</div></div>
-            <div><div className="text-4xl md:text-5xl font-bold mb-2">70+</div><div className="text-zinc-400">全球交易所</div></div>
-            <div><div className="text-4xl md:text-5xl font-bold mb-2">15+</div><div className="text-zinc-400">年历史数据</div></div>
-            <div><div className="text-4xl md:text-5xl font-bold mb-2">Real-Time</div><div className="text-zinc-400">数据更新</div></div>
+            <div><div className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">10,000+</div><div className="text-zinc-400">覆盖公司</div></div>
+            <div><div className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">70+</div><div className="text-zinc-400">全球交易所</div></div>
+            <div><div className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">15+</div><div className="text-zinc-400">年历史数据</div></div>
+            <div><div className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">Real-Time</div><div className="text-zinc-400">数据更新</div></div>
           </div>
         </div>
       </section>
@@ -137,15 +148,15 @@ export default function HomePage() {
         <div>
           <h2 className="text-4xl md:text-6xl font-bold mb-6">准备好更聪明地投资了吗？</h2>
           <p className="text-zinc-400 text-lg mb-10 max-w-xl mx-auto">从财报到投资决策，只需几秒</p>
-          <MagneticButton href="/company/AAPL"><span className="inline-flex px-10 py-5 bg-white text-black rounded-full font-medium text-lg">免费体验</span></MagneticButton>
+          <MagneticButton href="/company/AAPL"><span className="inline-flex px-10 py-5 bg-white text-black rounded-full font-medium text-lg hover:bg-zinc-100 transition-colors">免费体验</span></MagneticButton>
         </div>
       </section>
 
       {/* ══ Section 6: Footer ══ */}
-      <footer className="py-12 px-4 border-t border-zinc-800">
+      <footer className="py-12 px-4 border-t border-zinc-800/50">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="font-bold text-lg">Stock Insight</div>
-          <p className="text-zinc-500 text-sm">© 2026 Stock Insight · 专业级财务分析平台</p>
+          <p className="text-zinc-500 text-sm">&copy; 2026 Stock Insight &middot; 专业级财务分析平台</p>
           <a href="https://github.com/crowblues/stock-insight" target="_blank" rel="noopener" className="text-zinc-500 hover:text-white transition-colors text-sm">GitHub ↗</a>
         </div>
       </footer>
