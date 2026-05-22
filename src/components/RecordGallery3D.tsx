@@ -47,40 +47,31 @@ export default function RecordGallery3D() {
     return () => el.removeEventListener("wheel", handler);
   }, [navigate]);
 
-  const handleClick = (index: number) => {
-    setActiveIndex(prev => prev === index ? null : index);
-  };
-
   return (
     <section className="relative min-h-screen flex items-center justify-center py-16" style={{ background: "#F5F4F0" }}>
-      <div
-        ref={containerRef}
-        data-lenis-prevent
-        className="relative w-full max-w-2xl mx-auto px-4 flex flex-col"
-        style={{ perspective: "1000px", perspectiveOrigin: "center 30%" }}
-      >
+      <div ref={containerRef} data-lenis-prevent className="relative w-full max-w-2xl mx-auto px-4" style={{ perspective: "900px", perspectiveOrigin: "center 50%" }}>
         {CARDS.map((card, index) => {
           const isActive = index === activeIndex;
-          // 微妙透视：上面的卡片稍远(窄)，下面的稍近(宽)
-          const zDepth = ((index - 6) / 6) * 30; // -30 到 +30
           const transform = isActive
-            ? "translateX(-40px) translateZ(60px) rotate(-2.5deg)"
-            : `translateZ(${zDepth}px)`;
+            ? "rotateX(10deg) rotate(-2.5deg) translateZ(60px)"
+            : "rotateX(10deg)";
 
           return (
             <div
               key={card.symbol}
-              onClick={() => handleClick(index)}
+              onClick={() => setActiveIndex(prev => prev === index ? null : index)}
               className="relative cursor-pointer"
               style={{
                 transform,
+                transformOrigin: "center bottom",
                 transformStyle: "preserve-3d",
                 transition: "all 0.5s cubic-bezier(0.22, 1, 0.36, 1)",
                 zIndex: isActive ? 50 : 10,
-                marginBottom: "2px",
-                border: isActive ? "1px solid rgba(255,255,255,0.3)" : "none",
+                marginBottom: isActive ? "15px" : "-22px",
+                marginTop: isActive ? "15px" : "0",
+                border: isActive ? "1.5px solid rgba(255,255,255,0.6)" : "1px solid transparent",
                 borderRadius: isActive ? "12px" : "8px",
-                boxShadow: isActive ? "0 20px 60px rgba(0,0,0,0.4)" : "none",
+                boxShadow: isActive ? "0 15px 50px rgba(0,0,0,0.4)" : "0 2px 8px rgba(0,0,0,0.15)",
               }}
             >
               {isActive ? (
@@ -97,10 +88,9 @@ export default function RecordGallery3D() {
                   </div>
                 </div>
               ) : (
-                <div className="bg-[#1a1a1a] h-[46px] rounded-lg flex items-center px-5 gap-3 hover:bg-[#252525] transition-colors">
-                  <img src={card.image} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
+                <div className="bg-[#1a1a1a] h-[46px] rounded-lg flex items-center px-4 gap-3">
+                  <img src={card.image} alt="" className="w-7 h-7 rounded object-cover shrink-0" />
                   <span className="text-white/90 text-sm font-medium truncate">{card.name}</span>
-                  <span className="text-white/30 text-xs font-mono">{card.symbol}</span>
                   <div className="ml-auto flex gap-1.5">
                     {card.tags.map(t => (<span key={t} className="px-2 py-0.5 text-[9px] rounded-full bg-white/5 text-white/40">{t}</span>))}
                   </div>
