@@ -58,6 +58,7 @@ export default function StackedCompanyCards() {
         className="relative w-full max-w-[720px] z-10 px-6"
         onMouseEnter={() => { isMouseInside.current = true; }}
         onMouseLeave={() => { isMouseInside.current = false; }}
+        data-lenis-prevent
       >
         <div style={{ transform: `translateY(-${scrollOffset}px)`, transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}>
           {COMPANIES.map((company, index) => {
