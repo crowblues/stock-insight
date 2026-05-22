@@ -14,103 +14,92 @@ const COMPANIES = [
 
 export default function StackedCompanyCards() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const active = COMPANIES[activeIndex];
 
   return (
-    <section id="companies" className="relative min-h-screen py-20 px-4 transition-colors duration-700" style={{ backgroundColor: active.lightBg }}>
-      {/* 两侧装饰图片 */}
-      <div className="absolute left-4 top-1/4 w-32 h-44 rounded-2xl overflow-hidden opacity-40 hidden xl:block shadow-lg rotate-[-3deg]">
-        <Image src={COMPANIES[1].image} alt="" fill className="object-cover" sizes="128px" />
+    <section id="companies" className="relative min-h-screen py-16 px-4 transition-colors duration-700 overflow-hidden" style={{ backgroundColor: active.lightBg }}>
+      {/* 左侧装饰 */}
+      <div className="absolute left-6 top-[20%] w-36 h-52 rounded-2xl overflow-hidden opacity-30 hidden xl:block shadow-xl" style={{ transform: "rotate(-6deg) translateZ(0)" }}>
+        <Image src={COMPANIES[(activeIndex + 1) % 6].image} alt="" fill className="object-cover" sizes="144px" />
       </div>
-      <div className="absolute left-8 bottom-1/4 w-28 h-36 rounded-2xl overflow-hidden opacity-30 hidden xl:block shadow-lg rotate-[2deg]">
-        <Image src={COMPANIES[4].image} alt="" fill className="object-cover" sizes="112px" />
+      <div className="absolute left-16 bottom-[15%] w-28 h-40 rounded-xl overflow-hidden opacity-20 hidden xl:block shadow-lg" style={{ transform: "rotate(4deg)" }}>
+        <Image src={COMPANIES[(activeIndex + 3) % 6].image} alt="" fill className="object-cover" sizes="112px" />
       </div>
-      {/* 右侧浮动封面卡片 */}
-      <div className="absolute right-4 top-1/3 w-36 h-48 rounded-2xl overflow-hidden opacity-50 hidden xl:block shadow-xl rotate-[3deg]">
-        <Image src={active.image} alt="" fill className="object-cover" sizes="144px" />
+      {/* 右侧浮动封面 */}
+      <div className="absolute right-6 top-[25%] w-40 h-56 rounded-2xl overflow-hidden shadow-2xl hidden xl:block transition-all duration-700" style={{ transform: "rotate(4deg)", opacity: 0.6 }}>
+        <Image src={active.image} alt="" fill className="object-cover" sizes="160px" />
       </div>
-      <div className="absolute right-12 bottom-1/3 w-28 h-36 rounded-2xl overflow-hidden opacity-30 hidden xl:block shadow-lg rotate-[-2deg]">
-        <Image src={COMPANIES[2].image} alt="" fill className="object-cover" sizes="112px" />
+      <div className="absolute right-20 bottom-[20%] w-24 h-32 rounded-xl overflow-hidden opacity-25 hidden xl:block shadow-lg" style={{ transform: "rotate(-3deg)" }}>
+        <Image src={COMPANIES[(activeIndex + 4) % 6].image} alt="" fill className="object-cover" sizes="96px" />
       </div>
 
-      {/* 中心面板 */}
+      {/* 标题 */}
+      <div className="text-center mb-10">
+        <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">Stock Insight Archive</p>
+        <h2 className="font-serif text-4xl md:text-5xl font-bold text-gray-900">翻阅全球巨头</h2>
+      </div>
+
+      {/* 中心面板 — 唱片堆叠 */}
       <div className="relative max-w-3xl mx-auto">
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-          {/* 上方未选中的窄条 */}
+        <div className="bg-white rounded-[2rem] shadow-[0_20px_80px_rgba(0,0,0,0.12)] overflow-hidden">
           {COMPANIES.map((company, index) => {
-            if (index >= activeIndex) return null;
+            const isActive = index === activeIndex;
+            const isHovered = index === hoveredIndex;
             return (
-              <button key={company.symbol} onClick={() => setActiveIndex(index)} className="w-full h-[38px] flex items-center px-6 border-b border-gray-100 hover:bg-gray-50 transition-colors text-left">
-                <span className="text-xs font-mono text-gray-400 mr-3">{String(index + 1).padStart(2, "0")}</span>
-                <span className="text-sm font-medium text-gray-700">{company.nameCn}</span>
-                <span className="text-xs text-gray-400 ml-2">{company.symbol}</span>
-                <span className="ml-auto text-xs text-gray-400">{company.industry}</span>
-              </button>
-            );
-          })}
+              <div key={company.symbol} className="transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]" style={{ maxHeight: isActive ? "800px" : "44px", overflow: "hidden" }}>
+                {/* 唱片脊背 — 深色条 */}
+                {!isActive && (
+                  <button
+                    onClick={() => setActiveIndex(index)}
+                    onMouseEnter={() => setHoveredIndex(index)}
+                    onMouseLeave={() => setHoveredIndex(null)}
+                    className="w-full h-[44px] flex items-center gap-3 px-6 transition-all duration-300 cursor-pointer relative group"
+                    style={{ background: isHovered ? company.color : "#1a1a1a" }}
+                  >
+                    <span className="text-[11px] font-mono text-white/40 group-hover:text-white/70">{String(index + 1).padStart(2, "0")}</span>
+                    <span className="text-sm font-medium text-white/80 group-hover:text-white">{company.nameCn}</span>
+                    <span className="text-xs text-white/40 font-mono">{company.symbol}</span>
+                    <span className="ml-auto text-[11px] text-white/30 group-hover:text-white/60 hidden sm:inline">{company.industry}</span>
+                    {/* 品牌色左边条 */}
+                    <div className="absolute left-0 top-0 bottom-0 w-1 transition-opacity duration-300" style={{ background: company.color, opacity: isHovered ? 1 : 0.3 }} />
+                  </button>
+                )}
 
-          {/* 展开的活跃项 */}
-          <div className="p-8 md:p-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* 左侧：公司图片 */}
-              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden">
-                <Image src={active.image} alt={active.nameCn} fill className="object-cover" sizes="(max-width: 768px) 100vw, 400px" priority />
-                <div className="absolute bottom-3 left-3 flex gap-1.5">
-                  {active.tags.map(tag => (
-                    <span key={tag} className="px-2 py-0.5 text-[10px] rounded-full bg-white/90 text-gray-700 font-medium">{tag}</span>
-                  ))}
-                </div>
-              </div>
-              {/* 右侧：公司信息 */}
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Stock Insight Archive</p>
-                <h2 className="font-serif text-3xl md:text-4xl font-bold text-gray-900 mb-1">{active.nameCn}</h2>
-                <p className="text-lg text-gray-500 mb-6">{active.name} · {active.industry}</p>
-
-                {/* 财务指标列表（像曲目列表） */}
-                <div className="border-t border-gray-200">
-                  {[
-                    { label: "Revenue (营收)", value: active.metrics.revenue },
-                    { label: "EPS (每股收益)", value: active.metrics.eps },
-                    { label: "P/E Ratio (市盈率)", value: active.metrics.pe },
-                    { label: "ROE (净资产收益率)", value: active.metrics.roe },
-                    { label: "Gross Margin (毛利率)", value: active.metrics.margin },
-                  ].map((item, i) => (
-                    <div key={item.label} className="flex items-center justify-between py-3 border-b border-gray-100 group hover:bg-gray-50 px-2 -mx-2 rounded transition-colors">
-                      <div className="flex items-center gap-3">
-                        <span className="text-[11px] text-gray-300 font-mono w-5">{String(i + 1).padStart(2, "0")}</span>
-                        <span className="text-sm text-gray-700">{item.label}</span>
+                {/* 展开的内容 */}
+                {isActive && (
+                  <div className="p-8 md:p-10 animate-[fadeIn_0.6s_ease-out]">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {/* 左：公司图片 */}
+                      <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-lg">
+                        <Image src={company.image} alt={company.nameCn} fill className="object-cover" sizes="(max-width:768px) 100vw, 400px" priority />
+                        <div className="absolute bottom-3 left-3 flex gap-1.5">
+                          {company.tags.map(tag => (<span key={tag} className="px-2.5 py-1 text-[10px] rounded-full bg-white/90 text-gray-700 font-medium shadow-sm">{tag}</span>))}
+                        </div>
                       </div>
-                      <span className="text-sm font-mono font-semibold text-gray-900">{item.value}</span>
+                      {/* 右：信息 */}
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mb-1">No. {String(index + 1).padStart(2, "0")} — {company.industry}</p>
+                        <h2 className="font-serif text-3xl md:text-4xl font-bold text-gray-900 mb-1">{company.nameCn}</h2>
+                        <p className="text-base text-gray-500 mb-6">{company.name}</p>
+                        <div className="border-t border-gray-200">
+                          {[{ label: "Revenue (营收)", value: company.metrics.revenue }, { label: "EPS (每股收益)", value: company.metrics.eps }, { label: "P/E Ratio (市盈率)", value: company.metrics.pe }, { label: "ROE (净资产收益率)", value: company.metrics.roe }, { label: "Gross Margin (毛利率)", value: company.metrics.margin }].map((item, i) => (
+                            <div key={item.label} className="flex items-center justify-between py-3 border-b border-gray-100 hover:bg-gray-50/50 px-2 -mx-2 rounded transition-colors">
+                              <div className="flex items-center gap-3"><span className="text-[11px] text-gray-300 font-mono w-5">{String(i + 1).padStart(2, "0")}</span><span className="text-sm text-gray-600">{item.label}</span></div>
+                              <span className="text-sm font-mono font-semibold text-gray-900">{item.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-5"><h3 className="text-[11px] uppercase tracking-widest text-gray-400 mb-2">Company Story</h3><p className="text-sm text-gray-600 leading-relaxed">{company.story}</p></div>
+                        <div className="flex gap-3 mt-6">
+                          <Link href={`/company/${company.symbol}`} className="px-5 py-2.5 bg-gray-900 text-white text-sm rounded-full font-medium hover:bg-gray-700 transition-colors">查看完整报告</Link>
+                          <button className="px-5 py-2.5 bg-gray-100 text-gray-700 text-sm rounded-full font-medium hover:bg-gray-200 transition-colors border border-gray-200">对比分析</button>
+                        </div>
+                      </div>
                     </div>
-                  ))}
-                </div>
-
-                {/* Company Story */}
-                <div className="mt-6">
-                  <h3 className="text-xs uppercase tracking-widest text-gray-400 mb-2">Company Story</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">{active.story}</p>
-                </div>
-
-                {/* 操作按钮 */}
-                <div className="flex gap-3 mt-6">
-                  <Link href={`/company/${active.symbol}`} className="px-5 py-2.5 bg-gray-900 text-white text-sm rounded-full font-medium hover:bg-gray-700 transition-colors">查看完整报告</Link>
-                  <button className="px-5 py-2.5 bg-gray-100 text-gray-700 text-sm rounded-full font-medium hover:bg-gray-200 transition-colors border border-gray-200">对比分析</button>
-                </div>
+                  </div>
+                )}
               </div>
-            </div>
-          </div>
-
-          {/* 下方未选中的窄条 */}
-          {COMPANIES.map((company, index) => {
-            if (index <= activeIndex) return null;
-            return (
-              <button key={company.symbol} onClick={() => setActiveIndex(index)} className="w-full h-[38px] flex items-center px-6 border-t border-gray-100 hover:bg-gray-50 transition-colors text-left">
-                <span className="text-xs font-mono text-gray-400 mr-3">{String(index + 1).padStart(2, "0")}</span>
-                <span className="text-sm font-medium text-gray-700">{company.nameCn}</span>
-                <span className="text-xs text-gray-400 ml-2">{company.symbol}</span>
-                <span className="ml-auto text-xs text-gray-400">{company.industry}</span>
-              </button>
             );
           })}
         </div>
