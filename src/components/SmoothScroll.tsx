@@ -17,6 +17,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
       smoothWheel: true,
       wheelMultiplier: 0.8,
       touchMultiplier: 1.5,
+      prevent: (node: HTMLElement) => node.closest("[data-lenis-prevent]") !== null,
     });
 
     // 让 ScrollTrigger 和 Lenis 同步
