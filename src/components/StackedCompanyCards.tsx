@@ -61,24 +61,25 @@ export default function StackedCompanyCards() {
           let mb: string;
 
           if (isHovered) {
-            // 选中卡片：弹出 + 微倾斜（更有动感）
-            transform = "rotateX(-2deg) rotateY(1.5deg) translateZ(80px) scale(1.05)";
+            // 选中卡片：大幅倾斜弹出（像从唱片堆里抽出来）
+            transform = "rotateX(-8deg) rotateY(2.5deg) translateZ(100px) scale(1.06)";
             zIdx = 50;
             opa = 1;
-            shadow = "0 30px 60px rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.9)";
-            mb = "8px";
+            shadow = "0 40px 80px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.9), 0 0 30px rgba(255,255,255,0.1)";
+            mb = "12px";
           } else if (hovered !== null) {
             const dist = Math.abs(offset);
-            const angle = offset < 0 ? dist * 8 : dist * -8;
-            const s = Math.max(1 - dist * 0.03, 0.85);
-            transform = `rotateX(${angle}deg) translateZ(${-dist * 20}px) scale(${s})`;
+            const angle = offset < 0 ? dist * 14 : dist * -14;
+            const s = Math.max(1 - dist * 0.04, 0.82);
+            const z = -dist * 30;
+            transform = `rotateX(${angle}deg) translateZ(${z}px) scale(${s})`;
             zIdx = 20 - dist;
-            opa = Math.max(1 - dist * 0.15, 0.4);
-            shadow = "0 4px 12px rgba(0,0,0,0.2)";
-            mb = "-12px";
+            opa = Math.max(1 - dist * 0.18, 0.3);
+            shadow = "0 4px 12px rgba(0,0,0,0.3)";
+            mb = "-14px";
           } else {
-            const angle = (index - COMPANIES.length / 2) * 2.2;
-            transform = `rotateX(${angle}deg)`;
+            const angle = (index - COMPANIES.length / 2) * 3;
+            transform = `rotateX(${angle}deg) translateZ(0px)`;
             zIdx = COMPANIES.length - index;
             opa = 1;
             shadow = "0 2px 8px rgba(0,0,0,0.15)";

@@ -48,39 +48,35 @@ export default function HomePage() {
     <main className="bg-black text-white">
       <SideNav />
 
-      {/* ══ Section 1: Hero - CSS动画背景 ══ */}
+      {/* ══ Section 1: Hero - 电影感视频背景 ══ */}
       <section id="hero" ref={heroRef} className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* 动画网格背景 */}
-        <div className="absolute inset-0 bg-[#0a0a0f]">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-transparent to-transparent" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-purple-900/15 via-transparent to-transparent" />
-          <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-          {/* 浮动光球 */}
-          <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-blue-500/5 blur-[100px] animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-purple-500/5 blur-[100px] animate-pulse" style={{ animationDelay: "2s" }} />
-        </div>
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black to-transparent" />
+        {/* 视频背景 */}
+        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0">
+          <source src="https://res.cloudinary.com/dfonotyfb/video/upload/v1775585556/dds3_1_rqhg7x.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-black/40 z-[1]" />
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black to-transparent z-[1]" />
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          <div className="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 mb-8">
+          <div className="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-md border border-white/10 mb-8">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-sm text-zinc-300">Real-Time Market Data</span>
+            <span className="text-sm text-zinc-200 tracking-wide">Real-Time Market Data</span>
           </div>
-          <h1 className="hero-title text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[0.95] mb-6">
-            洞察数字背后的<br/><span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">真相</span>
+          <h1 className="hero-title text-5xl md:text-7xl lg:text-[5.5rem] font-bold tracking-tight leading-[1] mb-6" style={{ fontFamily: "'Georgia', serif" }}>
+            洞察数字背后的<br/><span className="bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent">真相</span>
           </h1>
-          <p className="hero-sub text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-10">专业级财务数据分析，为每一位投资者而生</p>
-          <div className="flex gap-4 justify-center flex-wrap mb-10">
+          <p className="hero-sub text-lg md:text-xl text-zinc-300/80 max-w-2xl mx-auto mb-10 tracking-wide">专业级财务数据分析，为每一位投资者而生</p>
+          <div className="flex gap-4 justify-center flex-wrap mb-12">
             <MagneticButton href="#companies"><span className="hero-cta px-8 py-4 bg-white text-black rounded-full font-medium inline-block hover:bg-zinc-100 transition-colors">开始探索</span></MagneticButton>
-            <MagneticButton href="#features"><span className="hero-cta px-8 py-4 bg-white/5 backdrop-blur-sm border border-white/15 rounded-full font-medium inline-block hover:bg-white/10 transition-colors">了解更多</span></MagneticButton>
+            <MagneticButton href="#features"><span className="hero-cta px-8 py-4 bg-white/5 backdrop-blur-md border border-white/20 rounded-full font-medium inline-block hover:bg-white/10 transition-colors">了解更多</span></MagneticButton>
           </div>
           {/* 搜索 */}
           <div className="w-full max-w-xl mx-auto">
             <div className="flex gap-2">
-              <input type="text" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={handleKeyDown} placeholder="输入股票代码或公司名称..." className="flex-1 px-5 py-4 bg-white/5 backdrop-blur border border-white/10 rounded-xl text-white text-lg placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all" />
-              <button onClick={handleSearch} disabled={loading} className="px-6 py-4 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-500 transition-colors disabled:opacity-50">{loading ? "..." : "搜索"}</button>
+              <input type="text" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={handleKeyDown} placeholder="输入股票代码或公司名称..." className="flex-1 px-5 py-4 bg-white/5 backdrop-blur-md border border-white/15 rounded-xl text-white text-lg placeholder-white/30 focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/20 transition-all" />
+              <button onClick={handleSearch} disabled={loading} className="px-6 py-4 bg-white/10 backdrop-blur-md border border-white/15 text-white rounded-xl font-medium hover:bg-white/20 transition-colors disabled:opacity-50">{loading ? "..." : "搜索"}</button>
             </div>
             {searched && results.length > 0 && (
-              <div className="mt-3 bg-zinc-900/95 backdrop-blur border border-zinc-700/50 rounded-xl overflow-hidden text-left shadow-2xl">
+              <div className="mt-3 bg-black/80 backdrop-blur-xl border border-zinc-700/50 rounded-xl overflow-hidden text-left shadow-2xl">
                 {results.slice(0, 6).map(item => (
                   <Link key={item.symbol} href={`/company/${item.symbol}`} className="flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors border-b border-zinc-800/50 last:border-b-0">
                     <div><span className="font-bold text-blue-400 mr-2">{item.symbol}</span><span className="text-zinc-300">{item.name}</span></div>
