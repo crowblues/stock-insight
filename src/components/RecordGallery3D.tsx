@@ -18,21 +18,8 @@ const CARDS = [
 ];
 
 export default function RecordGallery3D() {
-  const [activeIndex, setActiveIndex] = useState<number | null>(3);
-  const lockRef = useRef(false);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const navigate = useCallback((dir: 1 | -1) => {
-    if (lockRef.current) return;
-    lockRef.current = true;
-    setActiveIndex(prev => {
-      const cur = prev ?? 0;
-      const next = cur + dir;
-      if (next < 0 || next >= CARDS.length) return prev;
-      return next;
-    });
-    setTimeout(() => { lockRef.current = false; }, 300);
-  }, []);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -40,56 +27,58 @@ export default function RecordGallery3D() {
     const handler = (e: WheelEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (Math.abs(e.deltaY) < 5) return;
-      navigate(e.deltaY > 0 ? 1 : -1);
     };
     el.addEventListener("wheel", handler, { passive: false });
     return () => el.removeEventListener("wheel", handler);
-  }, [navigate]);
+  }, []);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center py-16" style={{ background: "#F5F4F0" }}>
-      <div ref={containerRef} data-lenis-prevent className="relative w-full max-w-2xl mx-auto px-4" style={{ perspective: "900px", perspectiveOrigin: "center 50%" }}>
+      <div ref={containerRef} data-lenis-prevent className="relative flex flex-col items-center" style={{ perspective: "750px", perspectiveOrigin: "center 50%" }}>
         {CARDS.map((card, index) => {
           const isActive = index === activeIndex;
           const transform = isActive
             ? "rotateX(10deg) rotate(-2.5deg) translateZ(60px)"
-            : "rotateX(10deg)";
-
+            : "rotateX(16deg)";
           return (
             <div
               key={card.symbol}
-              onClick={() => setActiveIndex(prev => prev === index ? null : index)}
-              className="relative cursor-pointer"
+              onMouseEnter={() => setActiveIndex(index)}
+              onMouseLeave={() => setActiveIndex(null)}
+              className="relative"
               style={{
+                width: "620px",
                 transform,
                 transformOrigin: "center bottom",
                 transformStyle: "preserve-3d",
-                transition: "all 0.5s cubic-bezier(0.22, 1, 0.36, 1)",
+                transition: "all 0.4s cubic-bezier(0.22, 1, 0.36, 1)",
                 zIndex: isActive ? 50 : 10,
                 marginBottom: isActive ? "15px" : "-22px",
                 marginTop: isActive ? "15px" : "0",
-                border: isActive ? "1.5px solid rgba(255,255,255,0.6)" : "1px solid transparent",
-                borderRadius: isActive ? "12px" : "8px",
-                boxShadow: isActive ? "0 15px 50px rgba(0,0,0,0.4)" : "0 2px 8px rgba(0,0,0,0.15)",
+                border: isActive ? "1.5px solid rgba(255,255,255,0.6)" : "none",
+                borderTop: isActive ? "1.5px solid rgba(255,255,255,0.6)" : "1px solid rgba(255,255,255,0.08)",
+                borderRadius: isActive ? "12px" : "10px",
+                boxShadow: isActive ? "0 15px 50px rgba(0,0,0,0.4)" : "0 4px 12px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2)",
               }}
             >
+              {/* 表面渐变光泽 */}
+              <div className="absolute inset-0 rounded-[inherit] pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 40%)" }} />
               {isActive ? (
-                <div className="bg-[#1a1a1a] rounded-xl p-5 flex gap-5 items-start">
+                <div className="bg-[#1a1a1a] rounded-xl p-5 flex gap-5 items-start relative overflow-hidden">
                   <img src={card.image} alt={card.name} className="w-20 h-20 rounded-lg object-cover shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-white/50 text-xs font-mono mb-0.5">{card.symbol}</p>
                     <h3 className="text-white text-xl font-bold">{card.name} <span className="text-white/50 text-sm font-normal">{card.sub}</span></h3>
                     <p className="text-white/60 text-sm mt-1.5 leading-relaxed">{card.desc}</p>
                     <div className="flex items-center gap-2 mt-3">
-                      <Link href={`/company/${card.symbol}`} onClick={e => e.stopPropagation()} className="px-4 py-1.5 bg-white text-black text-xs rounded-full font-medium hover:bg-gray-200 transition-colors">查看报告 →</Link>
+                      <Link href={`/company/${card.symbol}`} className="px-4 py-1.5 bg-white text-black text-xs rounded-full font-medium hover:bg-gray-200 transition-colors">查看报告 →</Link>
                       {card.tags.map(t => (<span key={t} className="px-2.5 py-1 text-[10px] rounded-full bg-white/10 text-white/70">{t}</span>))}
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="bg-[#1a1a1a] h-[46px] rounded-lg flex items-center px-4 gap-3">
-                  <img src={card.image} alt="" className="w-7 h-7 rounded object-cover shrink-0" />
+                <div className="bg-[#1a1a1a] h-[46px] rounded-[10px] flex items-center px-4 gap-3 relative overflow-hidden">
+                  <img src={card.image} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
                   <span className="text-white/90 text-sm font-medium truncate">{card.name}</span>
                   <div className="ml-auto flex gap-1.5">
                     {card.tags.map(t => (<span key={t} className="px-2 py-0.5 text-[9px] rounded-full bg-white/5 text-white/40">{t}</span>))}
@@ -100,7 +89,6 @@ export default function RecordGallery3D() {
           );
         })}
       </div>
-      <p className="absolute bottom-6 left-1/2 -translate-x-1/2 text-gray-400 text-xs tracking-widest">↕ 滚轮 · 点击切换</p>
     </section>
   );
 }
