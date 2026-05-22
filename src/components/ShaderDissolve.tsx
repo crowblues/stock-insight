@@ -135,8 +135,8 @@ export default function ShaderDissolve({ triggerSelector, color = [0.2, 0.4, 1.0
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 pointer-events-none z-[100]"
-      style={{ mixBlendMode: "screen" }}
+      className="absolute inset-x-0 h-[60vh] pointer-events-none z-[30]"
+      style={{ top: "-30vh", mixBlendMode: "screen" }}
     />
   );
 }

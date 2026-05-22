@@ -50,18 +50,16 @@ export default function StackedCompanyCards() {
         </span>
       </div>
 
-      {/* 3D唱片堆 - preserve-3d + 无overflow-hidden */}
+      {/* 3D唱片堆 */}
       <div
         ref={containerRef}
         className="relative w-full max-w-[720px] z-10 px-6"
-        style={{ perspective: "1800px", transformStyle: "preserve-3d" }}
         onWheel={handleWheel}
       >
         <div style={{ transform: `translateY(-${scrollOffset}px)`, transition: "transform 0.3s ease-out" }}>
           {COMPANIES.map((company, index) => {
             const isHovered = hovered === index;
             const total = COMPANIES.length;
-            const baseAngle = (index - total / 2) * 1.8;
 
             let transform: string;
             let zIdx: number;
@@ -69,21 +67,21 @@ export default function StackedCompanyCards() {
             let shadow: string;
 
             if (isHovered) {
-              // 选中：明显侧倾 + 弹出（像从唱片堆里斜着抽出来）
-              transform = `rotateY(-12deg) rotateX(-3deg) translateZ(140px) translateX(-30px) scale(1.03)`;
+              // 选中：歪着抽出来 — rotateZ倾斜 + 左移 + 放大
+              transform = `rotateZ(-2.5deg) translateX(-35px) translateY(-4px) scale(1.03)`;
               zIdx = 50;
               opa = 1;
-              shadow = "0 50px 100px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.95), 0 0 50px rgba(255,255,255,0.06)";
+              shadow = "0 30px 60px rgba(0,0,0,0.45), 0 0 0 2px rgba(255,255,255,0.9), 0 0 30px rgba(255,255,255,0.05)";
             } else if (hovered !== null) {
-              // 未选中：微微让开（远离选中卡片方向）
-              const dist = index - hovered;
-              const push = dist < 0 ? -3 : 3;
-              transform = `rotateX(${baseAngle + push}deg) translateZ(-${Math.abs(dist) * 5}px) scale(0.99)`;
-              zIdx = total - Math.abs(dist);
-              opa = 0.75;
+              // 未选中：微微让开
+              const dist = Math.abs(index - hovered);
+              const pushY = index < hovered ? -3 * dist : 3 * dist;
+              transform = `translateY(${pushY}px) scale(0.99)`;
+              zIdx = total - dist;
+              opa = Math.max(0.6, 1 - dist * 0.1);
               shadow = "0 2px 8px rgba(0,0,0,0.15)";
             } else {
-              transform = `rotateX(${baseAngle}deg) translateZ(0px)`;
+              transform = `translateY(0px) scale(1)`;
               zIdx = total - index;
               opa = 1;
               shadow = "0 2px 6px rgba(0,0,0,0.12)";
@@ -96,8 +94,7 @@ export default function StackedCompanyCards() {
                 className="relative block cursor-pointer rounded-2xl"
                 style={{
                   transform,
-                  transformStyle: "preserve-3d",
-                  transformOrigin: "right center",
+                  transformOrigin: "center center",
                   zIndex: zIdx,
                   opacity: opa,
                   boxShadow: shadow,
