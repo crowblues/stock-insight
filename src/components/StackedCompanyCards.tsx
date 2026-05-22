@@ -23,18 +23,10 @@ export default function StackedCompanyCards() {
       className="relative min-h-screen flex items-center justify-center py-20 overflow-hidden"
       style={{ backgroundColor: activeCompany ? activeCompany.bgTint : "#f0ede8" }}
     >
-      {/* 模糊背景图 - hover时显示对应公司图片 */}
+      {/* 模糊背景图 */}
       {COMPANIES.map((company, i) => (
-        <div
-          key={company.symbol}
-          className="absolute inset-0 transition-opacity duration-700"
-          style={{ opacity: hovered === i ? 0.3 : 0 }}
-        >
-          <img
-            src={company.image}
-            alt=""
-            className="w-full h-full object-cover blur-[40px] scale-110"
-          />
+        <div key={company.symbol} className="absolute inset-0 transition-opacity duration-700" style={{ opacity: hovered === i ? 0.25 : 0 }}>
+          <img src={company.image} alt="" className="w-full h-full object-cover blur-[50px] scale-110" />
         </div>
       ))}
 
@@ -46,44 +38,32 @@ export default function StackedCompanyCards() {
       </div>
 
       {/* 3D 唱片堆叠容器 */}
-      <div
-        className="relative w-full max-w-[700px] z-10 px-4"
-        style={{ perspective: "1200px" }}
-      >
+      <div className="relative w-full max-w-[700px] z-10 px-4" style={{ perspective: "1400px" }}>
         {COMPANIES.map((company, index) => {
           const isHovered = hovered === index;
-          const offset = hovered !== null ? index - hovered : 0;
+          const total = COMPANIES.length;
+
+          // 默认：所有卡片按固定角度堆叠（从上到下逐渐平）
+          // 选中时：只有选中卡片弹出倾斜，其他卡片保持原位不动
+          const baseAngle = (index - total / 2) * 2.5;
 
           let transform: string;
           let zIdx: number;
           let opa: number;
           let shadow: string;
-          let mb: string;
 
           if (isHovered) {
-            // 选中卡片：大幅倾斜弹出（像从唱片堆里抽出来）
-            transform = "rotateX(-8deg) rotateY(2.5deg) translateZ(100px) scale(1.06)";
+            // 选中：大幅弹出 + 明显倾斜（像从唱片堆里抽出来）
+            transform = "rotateX(-6deg) rotateY(2deg) translateZ(120px) translateX(-10px) scale(1.04)";
             zIdx = 50;
             opa = 1;
-            shadow = "0 40px 80px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.9), 0 0 30px rgba(255,255,255,0.1)";
-            mb = "12px";
-          } else if (hovered !== null) {
-            const dist = Math.abs(offset);
-            const angle = offset < 0 ? dist * 14 : dist * -14;
-            const s = Math.max(1 - dist * 0.04, 0.82);
-            const z = -dist * 30;
-            transform = `rotateX(${angle}deg) translateZ(${z}px) scale(${s})`;
-            zIdx = 20 - dist;
-            opa = Math.max(1 - dist * 0.18, 0.3);
-            shadow = "0 4px 12px rgba(0,0,0,0.3)";
-            mb = "-14px";
+            shadow = "0 40px 80px rgba(0,0,0,0.5), 0 0 0 2.5px rgba(255,255,255,0.95), 0 0 40px rgba(255,255,255,0.08)";
           } else {
-            const angle = (index - COMPANIES.length / 2) * 3;
-            transform = `rotateX(${angle}deg) translateZ(0px)`;
-            zIdx = COMPANIES.length - index;
-            opa = 1;
-            shadow = "0 2px 8px rgba(0,0,0,0.15)";
-            mb = "-6px";
+            // 未选中：保持原位，不动
+            transform = `rotateX(${baseAngle}deg) translateZ(0px) scale(1)`;
+            zIdx = total - index;
+            opa = hovered !== null ? 0.85 : 1;
+            shadow = "0 2px 6px rgba(0,0,0,0.15)";
           }
 
           return (
@@ -93,13 +73,13 @@ export default function StackedCompanyCards() {
               className="relative block cursor-pointer rounded-2xl overflow-hidden"
               style={{
                 transform,
-                transformOrigin: "center center",
+                transformOrigin: "center bottom",
                 zIndex: zIdx,
                 opacity: opa,
                 boxShadow: shadow,
-                transition: "all 0.35s cubic-bezier(0.22, 1, 0.36, 1)",
-                marginBottom: mb,
-                willChange: "transform, opacity",
+                transition: "all 0.4s cubic-bezier(0.22, 1, 0.36, 1)",
+                marginBottom: "-4px",
+                willChange: "transform",
               }}
               onMouseEnter={() => setHovered(index)}
               onMouseLeave={() => setHovered(null)}
@@ -120,17 +100,17 @@ export default function StackedCompanyCards() {
 /* ═══ 默认卡片（唱片封套侧面） ═══ */
 function DefaultCard({ company }: { company: (typeof COMPANIES)[number] }) {
   return (
-    <div className="h-[56px] bg-[#1a1a1a] flex items-center px-5 gap-3">
-      <div className="w-[40px] h-[40px] rounded-lg overflow-hidden shrink-0 ring-1 ring-white/10">
+    <div className="h-[52px] bg-[#1a1a1a] flex items-center px-5 gap-3">
+      <div className="w-[36px] h-[36px] rounded-lg overflow-hidden shrink-0 ring-1 ring-white/10">
         <img src={company.image} alt="" className="w-full h-full object-cover" />
       </div>
       <div className="flex-1 min-w-0 flex items-center gap-3">
-        <span className="text-[11px] text-white/80 font-mono font-semibold">{company.symbol}</span>
-        <span className="text-[11px] text-white/40 font-mono truncate">{company.name}</span>
+        <span className="text-[10px] text-white/50 font-mono">...</span>
+        <span className="text-[11px] text-white/70 font-mono uppercase tracking-wider truncate">{company.name}</span>
       </div>
       <div className="flex gap-1.5 shrink-0">
         {company.tags.map(tag => (
-          <span key={tag} className="px-2 py-0.5 text-[9px] rounded-full font-mono font-medium" style={{ background: `${company.color}20`, color: company.color }}>
+          <span key={tag} className="px-2 py-0.5 text-[9px] rounded-full font-mono" style={{ background: `${company.color}20`, color: company.color }}>
             {tag}
           </span>
         ))}
@@ -139,7 +119,7 @@ function DefaultCard({ company }: { company: (typeof COMPANIES)[number] }) {
   );
 }
 
-/* ═══ 悬停卡片（弹出放大，白色边框光晕，微倾斜） ═══ */
+/* ═══ 悬停卡片（弹出倾斜，白色边框光晕） ═══ */
 function HoveredCard({ company }: { company: (typeof COMPANIES)[number] }) {
   return (
     <div className="bg-[#1a1a1a] p-5">
@@ -150,11 +130,11 @@ function HoveredCard({ company }: { company: (typeof COMPANIES)[number] }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] text-white/40 font-mono">{company.symbol}</span>
-            <span className="text-[10px] text-white/30 font-mono">·</span>
+            <span className="text-[10px] text-white/30">·</span>
             <span className="text-[10px] text-white/40 font-mono">{company.nameCn}</span>
             <div className="flex gap-1.5 ml-auto">
               {company.tags.map(tag => (
-                <span key={tag} className="px-2 py-0.5 text-[9px] rounded-full font-mono font-medium" style={{ background: `${company.color}25`, color: company.color }}>
+                <span key={tag} className="px-2 py-0.5 text-[9px] rounded-full font-mono" style={{ background: `${company.color}25`, color: company.color }}>
                   {tag}
                 </span>
               ))}

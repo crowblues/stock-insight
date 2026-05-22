@@ -50,30 +50,32 @@ export default function HomePage() {
 
       {/* ══ Section 1: Hero - 电影感视频背景 ══ */}
       <section id="hero" ref={heroRef} className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* CSS渐变底色（视频加载前/加载失败时的fallback） */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0c1222] via-[#0a0a1a] to-black z-0" />
         {/* 视频背景 */}
-        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0">
-          <source src="https://res.cloudinary.com/dfonotyfb/video/upload/v1775585556/dds3_1_rqhg7x.mp4" type="video/mp4" />
+        <video autoPlay loop muted playsInline preload="auto" className="absolute inset-0 w-full h-full object-cover z-[1]">
+          <source src="https://assets.mixkit.co/videos/48328/48328-720.mp4" type="video/mp4" />
         </video>
-        <div className="absolute inset-0 bg-black/40 z-[1]" />
-        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black to-transparent z-[1]" />
+        <div className="absolute inset-0 bg-black/50 z-[2]" />
+        <div className="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-black to-transparent z-[2]" />
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          <div className="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-md border border-white/10 mb-8">
+          <div className="hero-badge inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 backdrop-blur-md border border-white/10 mb-10">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-sm text-zinc-200 tracking-wide">Real-Time Market Data</span>
+            <span className="text-sm text-zinc-200/90 tracking-wider font-light">Live Global Market Intelligence</span>
           </div>
-          <h1 className="hero-title text-5xl md:text-7xl lg:text-[5.5rem] font-bold tracking-tight leading-[1] mb-6" style={{ fontFamily: "'Georgia', serif" }}>
-            洞察数字背后的<br/><span className="bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent">真相</span>
+          <h1 className="hero-title text-5xl md:text-7xl lg:text-[5.5rem] font-light tracking-tight leading-[1.05] mb-8" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+            Navigate Markets<br/>with <em className="italic font-normal">Clarity</em>
           </h1>
-          <p className="hero-sub text-lg md:text-xl text-zinc-300/80 max-w-2xl mx-auto mb-10 tracking-wide">专业级财务数据分析，为每一位投资者而生</p>
-          <div className="flex gap-4 justify-center flex-wrap mb-12">
-            <MagneticButton href="#companies"><span className="hero-cta px-8 py-4 bg-white text-black rounded-full font-medium inline-block hover:bg-zinc-100 transition-colors">开始探索</span></MagneticButton>
-            <MagneticButton href="#features"><span className="hero-cta px-8 py-4 bg-white/5 backdrop-blur-md border border-white/20 rounded-full font-medium inline-block hover:bg-white/10 transition-colors">了解更多</span></MagneticButton>
+          <p className="hero-sub text-lg md:text-xl text-zinc-300/70 max-w-2xl mx-auto mb-12 font-light tracking-wide leading-relaxed">Institutional-grade financial analytics, distilled for the modern investor.</p>
+          <div className="flex gap-4 justify-center flex-wrap mb-14">
+            <MagneticButton href="#companies"><span className="hero-cta px-8 py-4 bg-white text-black rounded-full font-medium inline-block hover:bg-zinc-100 transition-colors text-sm tracking-wide">Explore Companies</span></MagneticButton>
+            <MagneticButton href="#features"><span className="hero-cta px-8 py-4 bg-white/5 backdrop-blur-md border border-white/20 rounded-full font-medium inline-block hover:bg-white/10 transition-colors text-sm tracking-wide">Learn More</span></MagneticButton>
           </div>
           {/* 搜索 */}
-          <div className="w-full max-w-xl mx-auto">
+          <div className="w-full max-w-lg mx-auto">
             <div className="flex gap-2">
-              <input type="text" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={handleKeyDown} placeholder="输入股票代码或公司名称..." className="flex-1 px-5 py-4 bg-white/5 backdrop-blur-md border border-white/15 rounded-xl text-white text-lg placeholder-white/30 focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/20 transition-all" />
-              <button onClick={handleSearch} disabled={loading} className="px-6 py-4 bg-white/10 backdrop-blur-md border border-white/15 text-white rounded-xl font-medium hover:bg-white/20 transition-colors disabled:opacity-50">{loading ? "..." : "搜索"}</button>
+              <input type="text" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={handleKeyDown} placeholder="Search by ticker or company name..." className="flex-1 px-5 py-4 bg-white/5 backdrop-blur-md border border-white/15 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all text-sm" />
+              <button onClick={handleSearch} disabled={loading} className="px-5 py-4 bg-white/10 backdrop-blur-md border border-white/15 text-white rounded-xl font-medium hover:bg-white/20 transition-colors disabled:opacity-50 text-sm">{loading ? "..." : "Search"}</button>
             </div>
             {searched && results.length > 0 && (
               <div className="mt-3 bg-black/80 backdrop-blur-xl border border-zinc-700/50 rounded-xl overflow-hidden text-left shadow-2xl">
@@ -85,7 +87,7 @@ export default function HomePage() {
                 ))}
               </div>
             )}
-            {searched && !results.length && !loading && <p className="mt-3 text-white/40 text-sm">未找到匹配的公司</p>}
+            {searched && !results.length && !loading && <p className="mt-3 text-white/40 text-sm">No results found</p>}
           </div>
         </div>
       </section>
