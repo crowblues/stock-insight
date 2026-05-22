@@ -5,25 +5,15 @@ import { useGSAP } from "@gsap/react";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
 import Link from "next/link";
 import Image from "next/image";
-import dynamic from "next/dynamic";
 import VideoBackground from "@/components/VideoBackground";
 import MagneticButton from "@/components/MagneticButton";
 import SideNav from "@/components/SideNav";
 import Marquee from "@/components/Marquee";
-
-const CompanyCarousel = dynamic(() => import("@/components/CompanyCarousel"), { ssr: false });
+import StackedCompanyCards from "@/components/StackedCompanyCards";
 
 const VIDEO_HERO = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260207_050933_33e2620d-09cd-43a2-80ef-4cdbb42f4194.mp4";
 const VIDEO_MID = "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260329_050842_be71947f-f16e-4a14-810c-06e83d23ddb5.mp4";
 
-const COMPANIES = [
-  { symbol: "AAPL", name: "Apple Inc.", price: "$198.45", change: "+1.23%", positive: true, color: "#A3AAAE" },
-  { symbol: "MSFT", name: "Microsoft", price: "$425.12", change: "+0.87%", positive: true, color: "#00A4EF" },
-  { symbol: "NVDA", name: "NVIDIA", price: "$892.30", change: "+2.45%", positive: true, color: "#76B900" },
-  { symbol: "GOOGL", name: "Alphabet", price: "$175.88", change: "-0.32%", positive: false, color: "#4285F4" },
-  { symbol: "AMZN", name: "Amazon", price: "$186.54", change: "+1.05%", positive: true, color: "#FF9900" },
-  { symbol: "TSLA", name: "Tesla", price: "$178.22", change: "-1.18%", positive: false, color: "#CC0000" },
-];
 
 interface SearchResult { symbol: string; name: string; exchange: string; }
 
@@ -113,33 +103,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══ Section 2: 公司数据展示 ══ */}
-      <section id="companies" className="relative py-32 px-4 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-emerald-500/10 blur-[100px] pointer-events-none" />
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-4">热门公司</h2>
-          <p className="text-zinc-400 text-center mb-16 text-lg">追踪全球最具影响力的上市公司</p>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* 左栏：实时数据列表 */}
-            <div className="bg-zinc-900/50 backdrop-blur border border-zinc-800 rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-zinc-300 mb-4">实时行情</h3>
-              <div className="space-y-3">
-                {COMPANIES.map(c => (
-                  <Link key={c.symbol} href={`/company/${c.symbol}`} className="flex items-center justify-between p-3 rounded-xl hover:bg-zinc-800/50 transition-colors group">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ background: c.color }}>{c.symbol[0]}</div>
-                      <div><div className="font-semibold text-white group-hover:text-blue-400 transition-colors">{c.symbol}</div><div className="text-xs text-zinc-500">{c.name}</div></div>
-                    </div>
-                    <div className="text-right"><div className="font-mono text-white">{c.price}</div><div className={`text-sm font-mono ${c.positive ? "text-emerald-400" : "text-red-400"}`}>{c.change}</div></div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-            {/* 右栏：Swiper 轮播 */}
-            <div className="flex items-center">
-              <CompanyCarousel />
-            </div>
+      {/* ══ Section 2: 3D 堆叠卡片 ══ */}
+      <section id="companies" className="relative py-32 px-4 overflow-hidden min-h-screen flex flex-col justify-center">
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">翻阅全球巨头</h2>
+            <p className="text-zinc-400 text-lg">像挑选唱片一样，发现下一个投资机会</p>
           </div>
+          <StackedCompanyCards />
         </div>
       </section>
 
