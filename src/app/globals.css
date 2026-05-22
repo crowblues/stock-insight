@@ -1,17 +1,12 @@
 @import "tailwindcss";
 
 /**
- * 浅色主题配色方案
- * 参考 brandappart.com 的干净、专业设计感
+ * 深色宇宙风主题
+ * 参考 cosmic AI landing page 风格
  */
 :root {
-  --background: #F8F7F4;
-  --background-secondary: #FFFFFF;
-  --foreground: #1a1a1a;
-  --foreground-muted: #6b6b6b;
-  --accent: #1a1a1a;
-  --success: #10b981;
-  --danger: #ef4444;
+  --background: #0a0a0a;
+  --foreground: #f5f5f5;
 }
 
 @theme inline {
@@ -29,31 +24,29 @@ body {
   overflow-x: hidden;
 }
 
-/* 滚动条美化（浅色风格） */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  background: #F0EFEc;
-}
-::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #aaa;
-}
+/* 滚动条 */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
 
-/* 全局选中文字颜色 */
 ::selection {
-  background: rgba(26, 26, 26, 0.15);
-  color: #1a1a1a;
+  background: rgba(99, 102, 241, 0.3);
+  color: #fff;
 }
 
-/* Lenis 平滑滚动 */
-html.lenis, html.lenis body {
-  height: auto;
+/* Lenis */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+
+/* 宇宙旋转动画 */
+@keyframes spin-slow {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
 }
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
+@keyframes spin-reverse {
+  from { transform: translate(-50%, -50%) rotate(360deg); }
+  to { transform: translate(-50%, -50%) rotate(0deg); }
 }
+.animate-spin-slow { animation: spin-slow 30s linear infinite; }
+.animate-spin-reverse { animation: spin-reverse 20s linear infinite; }
