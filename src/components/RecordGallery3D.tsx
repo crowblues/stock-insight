@@ -31,63 +31,64 @@ export default function RecordGallery3D() {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center py-16" style={{ background: "#F5F4F0" }}>
-      <div ref={containerRef} data-lenis-prevent className="relative flex flex-col items-center gap-[3px]"
-        style={{ perspective: "750px", perspectiveOrigin: "center bottom", transformStyle: "preserve-3d" }}>
-        {CARDS.map((card, index) => {
-          const isActive = index === activeIndex;
-          const zLayer = CARDS.length - index; // 第1张z最高
-          const transform = isActive
-            ? "rotateX(10deg) rotate(-2.5deg) translateZ(60px)"
-            : `rotateX(16deg) translateZ(${zLayer}px)`;
-          return (
-            <div
-              key={card.symbol}
-              onMouseEnter={() => setActiveIndex(index)}
-              onMouseLeave={() => setActiveIndex(null)}
-              className="relative"
-              style={{
-                width: "650px",
-                height: isActive ? "auto" : "50px",
-                transform,
-                transformOrigin: "center bottom",
-                transition: "all 0.4s cubic-bezier(0.22, 1, 0.36, 1)",
-                zIndex: isActive ? 50 : zLayer,
-                marginTop: isActive ? "15px" : "0",
-                marginBottom: isActive ? "15px" : "0",
-                borderRadius: "12px",
-                border: isActive ? "1.5px solid rgba(255,255,255,0.6)" : "none",
-                borderTop: isActive ? "1.5px solid rgba(255,255,255,0.6)" : "1px solid rgba(255,255,255,0.06)",
-                boxShadow: isActive ? "0 20px 60px rgba(0,0,0,0.4)" : "0 4px 12px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2)",
-                background: "linear-gradient(180deg, #1f1f1f 0%, #141414 100%)",
-                overflow: "hidden",
-              }}
-            >
-              {isActive ? (
-                <div className="p-5 flex gap-5 items-start">
-                  <img src={card.image} alt={card.name} className="w-20 h-20 rounded-lg object-cover shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white/50 text-xs font-mono mb-0.5">{card.symbol}</p>
-                    <h3 className="text-white text-xl font-bold">{card.name} <span className="text-white/50 text-sm font-normal">{card.sub}</span></h3>
-                    <p className="text-white/60 text-sm mt-1.5 leading-relaxed">{card.desc}</p>
-                    <div className="flex items-center gap-2 mt-3">
-                      <Link href={`/company/${card.symbol}`} className="px-4 py-1.5 bg-white text-black text-xs rounded-full font-medium hover:bg-gray-200 transition-colors">查看报告 →</Link>
-                      {card.tags.map(t => (<span key={t} className="px-2.5 py-1 text-[10px] rounded-full bg-white/10 text-white/70">{t}</span>))}
+      {/* 外层 wrapper — 提供透视 */}
+      <div ref={containerRef} data-lenis-prevent
+        style={{ perspective: "600px", perspectiveOrigin: "center bottom" }}>
+        {/* 堆叠组 stack — 整组 rotateX！ */}
+        <div className="flex flex-col items-center gap-[3px]"
+          style={{ transform: "rotateX(32deg)", transformStyle: "preserve-3d", transformOrigin: "center bottom" }}>
+          {CARDS.map((card, index) => {
+            const isActive = index === activeIndex;
+            const zLayer = CARDS.length - index;
+            const cardTransform = isActive
+              ? "translateZ(60px) rotate(-2.5deg)"
+              : `translateZ(${zLayer}px)`;
+            return (
+              <div key={card.symbol}
+                onMouseEnter={() => setActiveIndex(index)}
+                onMouseLeave={() => setActiveIndex(null)}
+                className="relative"
+                style={{
+                  width: "650px", height: isActive ? "auto" : "50px",
+                  transform: cardTransform,
+                  transition: "all 0.4s cubic-bezier(0.22, 1, 0.36, 1)",
+                  zIndex: isActive ? 50 : zLayer,
+                  marginTop: isActive ? "15px" : "0",
+                  marginBottom: isActive ? "15px" : "0",
+                  borderRadius: "12px",
+                  border: isActive ? "1.5px solid rgba(255,255,255,0.6)" : "none",
+                  borderTop: isActive ? "" : "1px solid rgba(255,255,255,0.06)",
+                  boxShadow: isActive ? "0 20px 60px rgba(0,0,0,0.4)" : "0 4px 12px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2)",
+                  background: "linear-gradient(180deg, #1f1f1f 0%, #141414 100%)",
+                  overflow: "hidden",
+                }}>
+                {isActive ? (
+                  <div className="p-5 flex gap-5 items-start">
+                    <img src={card.image} alt={card.name} className="w-20 h-20 rounded-lg object-cover shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white/50 text-xs font-mono mb-0.5">{card.symbol}</p>
+                      <h3 className="text-white text-xl font-bold">{card.name} <span className="text-white/50 text-sm font-normal">{card.sub}</span></h3>
+                      <p className="text-white/60 text-sm mt-1.5 leading-relaxed">{card.desc}</p>
+                      <div className="flex items-center gap-2 mt-3">
+                        <Link href={`/company/${card.symbol}`} className="px-4 py-1.5 bg-white text-black text-xs rounded-full font-medium hover:bg-gray-200 transition-colors">查看报告 →</Link>
+                        {card.tags.map(t => (<span key={t} className="px-2.5 py-1 text-[10px] rounded-full bg-white/10 text-white/70">{t}</span>))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="h-[50px] flex items-center px-5 gap-3">
-                  <img src={card.image} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
-                  <span className="text-white/90 text-sm font-medium truncate">{card.name}</span>
-                  <span className="text-white/30 text-xs font-mono">{card.symbol}</span>
-                  <div className="ml-auto flex gap-1.5">
-                    {card.tags.map(t => (<span key={t} className="px-2 py-0.5 text-[9px] rounded-full bg-white/5 text-white/40">{t}</span>))}
+                ) : (
+                  <div className="h-[50px] flex items-center px-5 gap-3">
+                    <img src={card.image} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
+                    <span className="text-white/90 text-sm font-medium truncate">{card.name}</span>
+                    <span className="text-white/30 text-xs font-mono">{card.symbol}</span>
+                    <div className="ml-auto flex gap-1.5">
+                      {card.tags.map(t => (<span key={t} className="px-2 py-0.5 text-[9px] rounded-full bg-white/5 text-white/40">{t}</span>))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
