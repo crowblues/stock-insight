@@ -1,68 +1,69 @@
 "use client";
 
-import { useRef } from "react";
-import { useGSAP } from "@gsap/react";
-import { gsap } from "@/lib/gsap";
 import RecordGallery3D from "@/components/RecordGallery3D";
 
 export default function HomePage() {
-  const heroRef = useRef<HTMLDivElement>(null);
-
-  useGSAP(() => {
-    if (!heroRef.current) return;
-    const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-    tl.from(".hero-line", { opacity: 0, y: 100, duration: 1.4, stagger: 0.12, delay: 0.4 })
-      .from(".hero-sub", { opacity: 0, y: 40, duration: 0.9 }, "-=0.5")
-      .from(".hero-badge", { opacity: 0, scale: 0.8, duration: 0.7 }, "-=0.4");
-  }, { scope: heroRef });
-
   return (
-    <main className="bg-[#0a0a0a] text-white min-h-screen overflow-x-hidden">
-
-      {/* ══ Hero - 深色宇宙风 ══ */}
-      <section id="hero" ref={heroRef} className="relative h-screen flex flex-col justify-center items-center text-center overflow-hidden">
-        {/* 宇宙背景动画 */}
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at center, rgba(49,46,129,0.3) 0%, #0a0a0a 70%)" }} />
-          <div className="absolute top-1/2 left-1/2 w-[800px] h-[800px] rounded-full animate-spin-slow blur-3xl" style={{ background: "conic-gradient(from 0deg, rgba(37,99,235,0.2), rgba(124,58,237,0.1), rgba(49,46,129,0.05), rgba(37,99,235,0.2))" }} />
-          <div className="absolute top-1/2 left-1/2 w-[500px] h-[500px] rounded-full animate-spin-reverse blur-2xl" style={{ background: "conic-gradient(from 180deg, rgba(6,182,212,0.15), transparent, rgba(6,182,212,0.15))" }} />
+    <main className="min-h-screen overflow-x-hidden bg-[#0b0b0b] text-white">
+      <section
+        id="hero"
+        className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-8"
+        style={{
+          background:
+            "linear-gradient(90deg, #c9dcb2 0%, #eff3dc 16%, #f6f4e8 50%, #eef4d8 84%, #b6d58f 100%)",
+        }}
+      >
+        <div className="pointer-events-none absolute left-0 top-0 h-full w-[20vw] min-w-44 overflow-hidden">
+          <div className="absolute -left-16 bottom-4 h-[72%] w-[120%] rotate-[-10deg] rounded-[45%] bg-[linear-gradient(130deg,rgba(214,232,115,0.78)_0%,rgba(244,239,195,0.86)_36%,rgba(221,65,80,0.56)_67%,rgba(80,104,60,0.34)_100%)] blur-[1px]" />
+          <div className="absolute left-12 top-[31%] h-[46%] w-8 rotate-[5deg] rounded-full bg-[#31452d]/70" />
+          <div className="absolute -left-3 bottom-20 h-24 w-48 rotate-[12deg] rounded-[50%] bg-[#e34c55]/70" />
         </div>
 
-        <div className="relative z-10 px-6 max-w-[900px]">
-          <div className="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm mb-10">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Live · 10,000+ companies</span>
+        <div className="pointer-events-none absolute right-0 top-0 h-full w-[20vw] min-w-44 overflow-hidden">
+          <div className="absolute -right-20 top-6 h-[66%] w-[130%] rotate-[16deg] rounded-[45%] bg-[linear-gradient(230deg,rgba(35,94,42,0.82)_0%,rgba(126,178,72,0.66)_44%,rgba(238,238,188,0.72)_72%,rgba(235,143,159,0.48)_100%)] blur-[1px]" />
+          <div className="absolute right-16 top-4 h-48 w-16 rotate-[22deg] rounded-full bg-[#4c7d35]/80" />
+          <div className="absolute -right-3 bottom-24 h-36 w-28 rotate-[-24deg] rounded-[48%] bg-[#eaa2b2]/60" />
+        </div>
+
+        <a
+          href="#companies"
+          aria-label="Enter the chill zone"
+          className="group relative z-10 flex h-[min(76vh,760px)] w-full max-w-[1320px] items-center justify-center bg-[#030613] shadow-[0_26px_70px_rgba(35,44,28,0.26)] outline-none transition duration-500 hover:bg-[#040817] focus-visible:ring-2 focus-visible:ring-[#f95372]"
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_49%,rgba(246,71,102,0.12),transparent_15%),linear-gradient(180deg,rgba(255,255,255,0.02),transparent_18%,rgba(0,0,0,0.18))]" />
+
+          <div className="relative flex -translate-y-4 flex-col items-center">
+            <div className="relative h-[86px] w-[152px] rounded-[8px] bg-[#f65370] shadow-[0_0_26px_rgba(246,83,112,0.42),0_16px_40px_rgba(0,0,0,0.36)] transition duration-500 group-hover:-translate-y-1 group-hover:scale-[1.04]">
+              <div className="absolute -top-9 left-[82px] h-11 w-px rotate-[-10deg] bg-[#42475b]" />
+              <div className="absolute left-5 top-4 h-4 w-[104px] rounded-sm bg-[#080a13]" />
+              <div className="absolute left-7 top-[21px] h-0.5 w-16 bg-[#f1b3c0]/80" />
+              <div className="absolute right-6 top-[20px] h-1.5 w-1.5 rounded-full bg-[#f1b3c0]" />
+              <div className="absolute bottom-5 left-7 grid grid-cols-5 gap-x-3 gap-y-2">
+                {Array.from({ length: 15 }).map((_, index) => (
+                  <span key={index} className="h-1.5 w-1.5 rounded-full bg-[#8e2033]/72" />
+                ))}
+              </div>
+              <div className="absolute bottom-[22px] right-5 h-7 w-7 rounded-full border border-[#ff9daf] bg-[#e94766] shadow-[inset_0_2px_8px_rgba(255,255,255,0.25)]" />
+            </div>
+
+            <span className="mt-8 font-mono text-[11px] font-semibold uppercase tracking-[0.34em] text-[#f65370]/60 transition group-hover:text-[#ff7590]">
+              Enter the chill zone
+            </span>
           </div>
-
-          <h1 className="text-[clamp(2.5rem,7vw,6rem)] font-bold leading-[1.05] tracking-tight">
-            <span className="hero-line block">Browse financials</span>
-            <span className="hero-line block">like vinyl records.</span>
-          </h1>
-          <p className="hero-sub text-base md:text-lg text-white/40 mt-8 max-w-lg mx-auto leading-relaxed">
-            Enabling fluid interactions with financial data. Our platform empowers investors to act with intent, harnessing clarity, velocity, and insight to outperform tomorrow.
-          </p>
-
-          <div className="hero-badge mt-12">
-            <a href="#companies" className="inline-flex px-8 py-4 border border-white/20 rounded-full text-sm font-medium text-white/80 hover:bg-white/10 hover:border-white/40 transition-all duration-300">
-              Start Browsing
-            </a>
-          </div>
-        </div>
-
-        {/* 底部滚动提示 */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-10">
-          <div className="w-px h-12 bg-gradient-to-b from-transparent to-white/20" />
-        </div>
+        </a>
       </section>
 
-      {/* ══ 3D 唱片画廊 ══ */}
       <RecordGallery3D />
 
-      {/* ══ Footer ══ */}
-      <footer className="py-8 px-6 border-t border-white/5">
-        <div className="max-w-[1400px] mx-auto flex items-center justify-between">
-          <span className="text-white/20 text-xs font-mono">Stock Insight &copy; 2026</span>
-          <a href="https://github.com/crowblues/stock-insight" target="_blank" rel="noopener" className="text-white/20 hover:text-white/60 transition-colors text-xs font-mono">GitHub ↗</a>
+      <footer className="border-t border-white/5 bg-[#080808] px-6 py-8">
+        <div className="mx-auto flex max-w-[1320px] items-center justify-between">
+          <span className="font-mono text-xs text-white/25">Stock Insight 2026</span>
+          <a
+            href="#hero"
+            className="font-mono text-xs uppercase tracking-[0.22em] text-white/25 transition hover:text-white/70"
+          >
+            Back to top
+          </a>
         </div>
       </footer>
     </main>
