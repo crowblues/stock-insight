@@ -34,13 +34,13 @@ export default function SideNav() {
         <button
           key={id}
           onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })}
-          className={`group relative w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${active === id ? "bg-white text-black scale-110 shadow-lg" : "bg-zinc-800/80 text-zinc-400 hover:bg-zinc-700 hover:scale-105"}`}
+          className={`group relative w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${active === id ? "bg-[#1a1a1a] text-white scale-110 shadow-lg" : "bg-white text-[#1a1a1a]/40 hover:bg-[#1a1a1a]/5 hover:scale-105 border border-[#1a1a1a]/10"}`}
           title={label}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d={path} />
           </svg>
-          <span className="absolute left-14 px-3 py-1.5 rounded-lg bg-zinc-900 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg border border-zinc-700">{label}</span>
+          <span className="absolute left-14 px-3 py-1.5 rounded-lg bg-[#1a1a1a] text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg">{label}</span>
         </button>
       ))}
     </nav>

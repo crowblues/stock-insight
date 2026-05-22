@@ -31,7 +31,7 @@ export default function HomePage() {
   }, { scope: servicesRef });
 
   return (
-    <main className="bg-[#0a0a0a] text-white min-h-screen">
+    <main className="bg-[#F8F7F4] text-[#1a1a1a] min-h-screen">
       <SideNav />
 
       {/* ══ Hero ══ */}
@@ -40,22 +40,21 @@ export default function HomePage() {
           <h1 className="text-[clamp(2.5rem,8vw,7rem)] font-bold leading-[1.05] tracking-tight">
             <span className="hero-line block">Institutional-grade</span>
             <span className="hero-line block">financial analytics,</span>
-            <span className="hero-line block text-white/40">distilled.</span>
+            <span className="hero-line block text-[#1a1a1a]/35">distilled.</span>
           </h1>
-          <p className="hero-sub text-lg md:text-xl text-white/50 mt-8 max-w-xl leading-relaxed">
+          <p className="hero-sub text-lg md:text-xl text-[#1a1a1a]/50 mt-8 max-w-xl leading-relaxed">
             We turn complex financial data into clear, actionable insights for modern investors.
           </p>
           <div className="hero-cta mt-12 flex gap-4 items-center">
-            <Link href="#companies" className="px-8 py-4 bg-white text-black rounded-full font-medium text-sm hover:bg-white/90 transition-colors">
+            <Link href="#companies" className="px-8 py-4 bg-[#1a1a1a] text-white rounded-full font-medium text-sm hover:bg-[#333] transition-colors">
               Explore Companies
             </Link>
-            <Link href="#services" className="px-8 py-4 border border-white/20 rounded-full font-medium text-sm hover:bg-white/5 transition-colors">
+            <Link href="#services" className="px-8 py-4 border border-[#1a1a1a]/15 rounded-full font-medium text-sm hover:bg-[#1a1a1a]/5 transition-colors">
               Our Approach
             </Link>
           </div>
         </div>
-        {/* 右下角装饰 */}
-        <div className="absolute bottom-12 right-12 text-white/20 text-sm font-mono hidden lg:block">
+        <div className="absolute bottom-12 right-12 text-[#1a1a1a]/20 text-sm font-mono hidden lg:block">
           scroll to explore ↓
         </div>
       </section>
@@ -66,39 +65,39 @@ export default function HomePage() {
       {/* ══ Services ══ */}
       <section id="services" ref={servicesRef} className="py-32 px-6 md:px-16 lg:px-24">
         <div className="max-w-[1200px] mx-auto">
-          <div className="service-item border-t border-white/10 py-16">
+          <div className="service-item border-t border-[#1a1a1a]/10 py-16">
             <div className="flex flex-col md:flex-row gap-8">
-              <span className="text-white/30 font-mono text-sm">(01)</span>
+              <span className="text-[#1a1a1a]/30 font-mono text-sm">(01)</span>
               <div className="flex-1">
                 <h3 className="text-3xl md:text-4xl font-bold mb-4">Real-time financial data across 70+ exchanges.</h3>
-                <p className="text-white/50 text-lg leading-relaxed max-w-2xl">Second-level market data covering equities, ETFs, and indices. Every metric updated in real-time so you never trade on stale information.</p>
+                <p className="text-[#1a1a1a]/50 text-lg leading-relaxed max-w-2xl">Second-level market data covering equities, ETFs, and indices. Every metric updated in real-time so you never trade on stale information.</p>
               </div>
             </div>
           </div>
-          <div className="service-item border-t border-white/10 py-16">
+          <div className="service-item border-t border-[#1a1a1a]/10 py-16">
             <div className="flex flex-col md:flex-row gap-8">
-              <span className="text-white/30 font-mono text-sm">(02)</span>
+              <span className="text-[#1a1a1a]/30 font-mono text-sm">(02)</span>
               <div className="flex-1">
                 <h3 className="text-3xl md:text-4xl font-bold mb-4">AI-powered analysis that finds what you miss.</h3>
-                <p className="text-white/50 text-lg leading-relaxed max-w-2xl">Pattern recognition across 15+ years of financial history. Surface hidden correlations, flag anomalies, and generate actionable thesis in seconds.</p>
+                <p className="text-[#1a1a1a]/50 text-lg leading-relaxed max-w-2xl">Pattern recognition across 15+ years of financial history. Surface hidden correlations, flag anomalies, and generate actionable thesis in seconds.</p>
               </div>
             </div>
           </div>
-          <div className="service-item border-t border-white/10 py-16">
+          <div className="service-item border-t border-[#1a1a1a]/10 py-16">
             <div className="flex flex-col md:flex-row gap-8">
-              <span className="text-white/30 font-mono text-sm">(03)</span>
+              <span className="text-[#1a1a1a]/30 font-mono text-sm">(03)</span>
               <div className="flex-1">
                 <h3 className="text-3xl md:text-4xl font-bold mb-4">Visual reports that tell the story clearly.</h3>
-                <p className="text-white/50 text-lg leading-relaxed max-w-2xl">Interactive charts and dashboards designed for decision-making. Complex data distilled into clear narratives you can act on immediately.</p>
+                <p className="text-[#1a1a1a]/50 text-lg leading-relaxed max-w-2xl">Interactive charts and dashboards designed for decision-making. Complex data distilled into clear narratives you can act on immediately.</p>
               </div>
             </div>
           </div>
-          <div className="service-item border-t border-white/10 py-16 border-b">
+          <div className="service-item border-t border-[#1a1a1a]/10 py-16 border-b border-b-[#1a1a1a]/10">
             <div className="flex flex-col md:flex-row gap-8">
-              <span className="text-white/30 font-mono text-sm">(04)</span>
+              <span className="text-[#1a1a1a]/30 font-mono text-sm">(04)</span>
               <div className="flex-1">
                 <h3 className="text-3xl md:text-4xl font-bold mb-4">10,000+ companies. One unified platform.</h3>
-                <p className="text-white/50 text-lg leading-relaxed max-w-2xl">Cross-market comparison at your fingertips. From mega-caps to mid-caps, every company gets the same depth of analysis.</p>
+                <p className="text-[#1a1a1a]/50 text-lg leading-relaxed max-w-2xl">Cross-market comparison at your fingertips. From mega-caps to mid-caps, every company gets the same depth of analysis.</p>
               </div>
             </div>
           </div>
@@ -108,18 +107,18 @@ export default function HomePage() {
       {/* ══ CTA ══ */}
       <section id="cta" className="py-40 px-6 md:px-16 lg:px-24 text-center">
         <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-8">Ready to see clearly?</h2>
-        <p className="text-white/40 text-lg mb-12 max-w-lg mx-auto">From earnings reports to investment decisions, in seconds.</p>
-        <Link href="/company/AAPL" className="inline-flex px-10 py-5 bg-white text-black rounded-full font-medium text-sm hover:bg-white/90 transition-colors">
+        <p className="text-[#1a1a1a]/40 text-lg mb-12 max-w-lg mx-auto">From earnings reports to investment decisions, in seconds.</p>
+        <Link href="/company/AAPL" className="inline-flex px-10 py-5 bg-[#1a1a1a] text-white rounded-full font-medium text-sm hover:bg-[#333] transition-colors">
           Start Exploring
         </Link>
       </section>
 
       {/* ══ Footer ══ */}
-      <footer className="py-12 px-6 md:px-16 lg:px-24 border-t border-white/10">
+      <footer className="py-12 px-6 md:px-16 lg:px-24 border-t border-[#1a1a1a]/10">
         <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="font-bold text-lg">Stock Insight</div>
-          <p className="text-white/30 text-sm">&copy; 2026 Stock Insight</p>
-          <a href="https://github.com/crowblues/stock-insight" target="_blank" rel="noopener" className="text-white/30 hover:text-white transition-colors text-sm">GitHub ↗</a>
+          <p className="text-[#1a1a1a]/30 text-sm">&copy; 2026 Stock Insight</p>
+          <a href="https://github.com/crowblues/stock-insight" target="_blank" rel="noopener" className="text-[#1a1a1a]/30 hover:text-[#1a1a1a] transition-colors text-sm">GitHub ↗</a>
         </div>
       </footer>
     </main>

@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 /**
- * 深色主题配色方案
- * 参考 brandappart.com 的高端设计感
+ * 浅色主题配色方案
+ * 参考 brandappart.com 的干净、专业设计感
  */
 :root {
-  --background: #0a0a0a;
-  --background-secondary: #141414;
-  --foreground: #f5f5f5;
-  --foreground-muted: #a0a0a0;
-  --accent: #3b82f6;
+  --background: #F8F7F4;
+  --background-secondary: #FFFFFF;
+  --foreground: #1a1a1a;
+  --foreground-muted: #6b6b6b;
+  --accent: #1a1a1a;
   --success: #10b981;
   --danger: #ef4444;
 }
@@ -29,25 +29,25 @@ body {
   overflow-x: hidden;
 }
 
-/* 滚动条美化（深色风格） */
+/* 滚动条美化（浅色风格） */
 ::-webkit-scrollbar {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #141414;
+  background: #F0EFEc;
 }
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #ccc;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #aaa;
 }
 
 /* 全局选中文字颜色 */
 ::selection {
-  background: rgba(59, 130, 246, 0.3);
-  color: #fff;
+  background: rgba(26, 26, 26, 0.15);
+  color: #1a1a1a;
 }
 
 /* Lenis 平滑滚动 */
@@ -56,37 +56,4 @@ html.lenis, html.lenis body {
 }
 .lenis.lenis-smooth {
   scroll-behavior: auto !important;
-}
-
-/* Marquee 跑马灯动画 */
-@keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-.animate-marquee {
-  animation: marquee linear infinite;
-}
-
-/* Swiper 轮播自定义样式 */
-.company-carousel .swiper-slide {
-  transition: all 0.5s ease;
-  opacity: 0.4;
-  filter: blur(1px);
-}
-.company-carousel .swiper-slide-active {
-  opacity: 1;
-  filter: blur(0);
-}
-.company-carousel .swiper-button-next,
-.company-carousel .swiper-button-prev {
-  color: white;
-  background: rgba(255,255,255,0.1);
-  backdrop-filter: blur(10px);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-}
-.company-carousel .swiper-button-next::after,
-.company-carousel .swiper-button-prev::after {
-  font-size: 18px;
 }

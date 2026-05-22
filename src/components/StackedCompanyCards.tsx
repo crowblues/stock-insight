@@ -23,7 +23,6 @@ export default function StackedCompanyCards() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isMouseInside = useRef(false);
 
-  // 原生wheel事件（非passive），可以preventDefault阻止页面滚动
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -45,14 +44,12 @@ export default function StackedCompanyCards() {
   return (
     <section
       id="companies"
-      className="relative min-h-screen flex items-center justify-center py-20 overflow-hidden bg-[#0a0a0a]"
+      className="relative min-h-screen flex items-center justify-center py-20 overflow-hidden bg-[#F8F7F4]"
     >
-      {/* 左上角标签 */}
       <div className="absolute top-8 left-8 z-20 hidden md:block">
-        <span className="text-white/30 text-sm font-mono">(00) Select a company</span>
+        <span className="text-[#1a1a1a]/30 text-sm font-mono">(00) Select a company</span>
       </div>
 
-      {/* 唱片堆 */}
       <div
         ref={containerRef}
         className="relative w-full max-w-[720px] z-10 px-6"
@@ -71,23 +68,22 @@ export default function StackedCompanyCards() {
             let shadow: string;
 
             if (isHovered) {
-              // 歪着抽出来
               transform = `rotate(-2.5deg) translateX(-40px) translateY(-5px) scale(1.03)`;
               zIdx = 50;
               opa = 1;
-              shadow = "0 25px 50px rgba(0,0,0,0.6), 0 0 0 1.5px rgba(255,255,255,0.8)";
+              shadow = "0 25px 50px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06)";
             } else if (hovered !== null) {
               const dist = Math.abs(index - hovered);
               const dir = index < hovered ? -1 : 1;
               transform = `translateY(${dir * dist * 3}px)`;
               zIdx = total - dist;
               opa = Math.max(0.5, 1 - dist * 0.12);
-              shadow = "0 2px 8px rgba(0,0,0,0.3)";
+              shadow = "0 2px 8px rgba(0,0,0,0.06)";
             } else {
               transform = "translateY(0)";
               zIdx = total - index;
               opa = 1;
-              shadow = "0 1px 4px rgba(0,0,0,0.2)";
+              shadow = "0 1px 4px rgba(0,0,0,0.05)";
             }
 
             return (
@@ -115,17 +111,16 @@ export default function StackedCompanyCards() {
     </section>
   );
 }
-
 function DefaultCard({ company }: { company: (typeof COMPANIES)[number] }) {
   return (
-    <div className="h-[52px] bg-[#151515] rounded-xl flex items-center px-5 gap-3 border border-white/5">
+    <div className="h-[52px] bg-white rounded-xl flex items-center px-5 gap-3 border border-[#1a1a1a]/8">
       <div className="w-[34px] h-[34px] rounded-lg overflow-hidden shrink-0">
         <img src={company.image} alt="" className="w-full h-full object-cover" />
       </div>
-      <span className="text-[11px] text-white/60 font-mono uppercase tracking-wider truncate flex-1">{company.name}</span>
+      <span className="text-[11px] text-[#1a1a1a]/60 font-mono uppercase tracking-wider truncate flex-1">{company.name}</span>
       <div className="flex gap-1.5 shrink-0">
         {company.tags.map(tag => (
-          <span key={tag} className="px-2 py-0.5 text-[9px] rounded-full font-mono text-white/40 bg-white/5">{tag}</span>
+          <span key={tag} className="px-2 py-0.5 text-[9px] rounded-full font-mono text-[#1a1a1a]/40 bg-[#1a1a1a]/5">{tag}</span>
         ))}
       </div>
     </div>
@@ -134,24 +129,24 @@ function DefaultCard({ company }: { company: (typeof COMPANIES)[number] }) {
 
 function HoveredCard({ company }: { company: (typeof COMPANIES)[number] }) {
   return (
-    <div className="bg-[#151515] rounded-xl p-5 border border-white/10">
+    <div className="bg-white rounded-xl p-5 border border-[#1a1a1a]/10">
       <div className="flex gap-5">
         <div className="w-[80px] h-[80px] rounded-lg overflow-hidden shrink-0">
           <img src={company.image} alt="" className="w-full h-full object-cover" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] text-white/30 font-mono">{company.symbol}</span>
-            <span className="text-[10px] text-white/20">·</span>
-            <span className="text-[10px] text-white/30">{company.nameCn}</span>
+            <span className="text-[10px] text-[#1a1a1a]/30 font-mono">{company.symbol}</span>
+            <span className="text-[10px] text-[#1a1a1a]/20">·</span>
+            <span className="text-[10px] text-[#1a1a1a]/30">{company.nameCn}</span>
           </div>
-          <h3 className="text-white text-base font-bold">{company.name}</h3>
-          <p className="text-white/30 text-[11px] mt-0.5 mb-2">{company.industry}</p>
-          <p className="text-white/45 text-[11px] leading-relaxed">{company.desc}</p>
+          <h3 className="text-[#1a1a1a] text-base font-bold">{company.name}</h3>
+          <p className="text-[#1a1a1a]/30 text-[11px] mt-0.5 mb-2">{company.industry}</p>
+          <p className="text-[#1a1a1a]/50 text-[11px] leading-relaxed">{company.desc}</p>
           <div className="flex items-center gap-5 mt-3">
-            <div><span className="text-[8px] text-white/25 font-mono block">REV</span><span className="text-white/80 text-[11px] font-mono">{company.metrics.revenue}</span></div>
-            <div><span className="text-[8px] text-white/25 font-mono block">P/E</span><span className="text-white/80 text-[11px] font-mono">{company.metrics.pe}</span></div>
-            <div><span className="text-[8px] text-white/25 font-mono block">MGN</span><span className="text-white/80 text-[11px] font-mono">{company.metrics.margin}</span></div>
+            <div><span className="text-[8px] text-[#1a1a1a]/25 font-mono block">REV</span><span className="text-[#1a1a1a]/80 text-[11px] font-mono">{company.metrics.revenue}</span></div>
+            <div><span className="text-[8px] text-[#1a1a1a]/25 font-mono block">P/E</span><span className="text-[#1a1a1a]/80 text-[11px] font-mono">{company.metrics.pe}</span></div>
+            <div><span className="text-[8px] text-[#1a1a1a]/25 font-mono block">MGN</span><span className="text-[#1a1a1a]/80 text-[11px] font-mono">{company.metrics.margin}</span></div>
           </div>
         </div>
       </div>
