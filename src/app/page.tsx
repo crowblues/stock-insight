@@ -90,16 +90,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══ Section 2: 3D 堆叠卡片 ══ */}
-      <section id="companies" className="relative py-32 px-4 overflow-hidden min-h-screen flex flex-col justify-center">
-        <div className="max-w-7xl mx-auto w-full">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">翻阅全球巨头</h2>
-            <p className="text-zinc-400 text-lg">像挑选唱片一样，发现下一个投资机会</p>
-          </div>
-          <StackedCompanyCards />
-        </div>
-      </section>
+      {/* ══ Section 2: 公司档案（Chill FM 风格） ══ */}
+      <StackedCompanyCards />
 
       {/* Marquee 信任条 */}
       <Marquee items={["AAPL","MSFT","NVDA","GOOGL","AMZN","TSLA","META","JPM","V","JNJ","BRK.B","UNH"]} speed={30} className="py-5 text-white/15 text-2xl font-bold border-y border-zinc-800/50" />
