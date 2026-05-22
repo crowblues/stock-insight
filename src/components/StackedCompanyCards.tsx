@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
 const COMPANIES = [
@@ -21,13 +21,25 @@ export default function StackedCompanyCards() {
   const [hovered, setHovered] = useState<number | null>(null);
   const [scrollOffset, setScrollOffset] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isMouseInside = useRef(false);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.stopPropagation();
-    setScrollOffset(prev => {
-      const max = (COMPANIES.length - 8) * 58;
-      return Math.max(0, Math.min(max, prev + e.deltaY * 0.4));
-    });
+  // 原生wheel事件（非passive），可以preventDefault阻止页面滚动
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      if (!isMouseInside.current) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setScrollOffset(prev => {
+        const max = (COMPANIES.length - 7) * 55;
+        return Math.max(0, Math.min(max, prev + e.deltaY * 0.6));
+      });
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
   return (
@@ -44,7 +56,8 @@ export default function StackedCompanyCards() {
       <div
         ref={containerRef}
         className="relative w-full max-w-[720px] z-10 px-6"
-        onWheel={handleWheel}
+        onMouseEnter={() => { isMouseInside.current = true; }}
+        onMouseLeave={() => { isMouseInside.current = false; }}
       >
         <div style={{ transform: `translateY(-${scrollOffset}px)`, transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}>
           {COMPANIES.map((company, index) => {
