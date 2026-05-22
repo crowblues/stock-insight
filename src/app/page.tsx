@@ -1,11 +1,9 @@
 "use client";
 
-import { useRef, Suspense } from "react";
+import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/lib/gsap";
-import dynamic from "next/dynamic";
-
-const RecordGallery3D = dynamic(() => import("@/components/RecordGallery3D"), { ssr: false });
+import RecordGallery3D from "@/components/RecordGallery3D";
 
 export default function HomePage() {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -58,9 +56,7 @@ export default function HomePage() {
       </section>
 
       {/* ══ 3D 唱片画廊 ══ */}
-      <Suspense fallback={<div className="h-screen bg-[#0a0a0a] flex items-center justify-center"><span className="text-white/20 text-sm font-mono">Loading gallery...</span></div>}>
-        <RecordGallery3D />
-      </Suspense>
+      <RecordGallery3D />
 
       {/* ══ Footer ══ */}
       <footer className="py-8 px-6 border-t border-white/5">

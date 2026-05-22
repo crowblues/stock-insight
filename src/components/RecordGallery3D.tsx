@@ -1,8 +1,5 @@
 "use client";
-import { useRef, useState, useEffect, useMemo } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useTexture } from "@react-three/drei";
-import * as THREE from "three";
+import { useState, useRef, useEffect } from "react";
 
 const CARDS = [
   { symbol: "AAPL", name: "Apple", image: "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?w=600&q=80" },
@@ -19,150 +16,91 @@ const CARDS = [
   { symbol: "BRK.B", name: "Berkshire", image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&q=80" },
 ];
 
-function CardPlane({ position, rotation, image, isActive, onClick }: {
-  position: [number, number, number];
-  rotation: [number, number, number];
-  image: string;
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const texture = useTexture(image);
-  const targetPos = useRef(new THREE.Vector3(...position));
-  const targetRot = useRef(new THREE.Euler(...rotation));
-
-  useEffect(() => {
-    if (isActive) {
-      targetPos.current.set(position[0], position[1], position[2] + 1.5);
-      targetRot.current.set(0, 0, -0.04);
-    } else {
-      targetPos.current.set(...position);
-      targetRot.current.set(...rotation);
-    }
-  }, [isActive, position, rotation]);
-
-  useFrame((_, delta) => {
-    if (!meshRef.current) return;
-    meshRef.current.position.lerp(targetPos.current, delta * 4);
-    meshRef.current.rotation.x += (targetRot.current.x - meshRef.current.rotation.x) * delta * 4;
-    meshRef.current.rotation.y += (targetRot.current.y - meshRef.current.rotation.y) * delta * 4;
-    meshRef.current.rotation.z += (targetRot.current.z - meshRef.current.rotation.z) * delta * 4;
-  });
-
-  return (
-    <mesh ref={meshRef} position={position} rotation={rotation} onClick={onClick}>
-      <planeGeometry args={[1.6, 2.2]} />
-      <meshBasicMaterial map={texture} side={THREE.DoubleSide} transparent opacity={isActive ? 1 : 0.85} />
-    </mesh>
-  );
-}
-
-function Scene({ activeIndex, setActiveIndex }: { activeIndex: number; setActiveIndex: (i: number) => void }) {
-  const groupRef = useRef<THREE.Group>(null);
-  const mouse = useRef({ x: 0, y: 0 });
-  const { viewport } = useThree();
-
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      mouse.current.x = (e.clientX / window.innerWidth - 0.5) * 2;
-      mouse.current.y = (e.clientY / window.innerHeight - 0.5) * 2;
-    };
-    window.addEventListener("mousemove", onMove);
-    return () => window.removeEventListener("mousemove", onMove);
-  }, []);
-
-  useFrame((_, delta) => {
-    if (!groupRef.current) return;
-    const targetRotY = mouse.current.x * 0.15;
-    const targetRotX = mouse.current.y * 0.08;
-    groupRef.current.rotation.y += (targetRotY - groupRef.current.rotation.y) * delta * 2;
-    groupRef.current.rotation.x += (targetRotX - groupRef.current.rotation.x) * delta * 2;
-  });
-
-  const positions = useMemo(() => {
-    return CARDS.map((_, i) => {
-      const angle = (i / CARDS.length) * Math.PI * 0.8 - Math.PI * 0.4;
-      const radius = 4.5;
-      const x = Math.sin(angle) * radius;
-      const z = Math.cos(angle) * radius - radius;
-      const y = (i % 3 - 1) * 0.12;
-      const rotY = -angle * 0.7;
-      const rotZ = (i % 2 === 0 ? 0.02 : -0.02);
-      return { pos: [x, y, z] as [number, number, number], rot: [0, rotY, rotZ] as [number, number, number] };
-    });
-  }, []);
-
-  return (
-    <group ref={groupRef} position={[0, 0, 0]}>
-      {CARDS.map((card, i) => (
-        <CardPlane
-          key={card.symbol}
-          position={positions[i].pos}
-          rotation={positions[i].rot}
-          image={card.image}
-          isActive={activeIndex === i}
-          onClick={() => setActiveIndex(i === activeIndex ? -1 : i)}
-        />
-      ))}
-    </group>
-  );
-}
+// 每张卡片在3D空间的散落坐标: [x%, y%, z(px), rotateX, rotateY, rotateZ]
+const L: number[][] = [
+  [-28,-8, 40, 8,-25,-3],[-12, 6,100,-4,-15, 2],[ 0,-16,160, 6,-8,-1],
+  [ 12, 3,120,-3, 12, 2],[ 22,-6, 60, 5, 20,-2],[ 30, 8,140,-6, 28, 3],
+  [-24,14,180, 4,-20,-2],[ -6,-3, 20,-5, -5, 1],[ 14,12, 80, 7, 15,-1],
+  [ 26,-12,200,-2, 22, 2],[-18,-20, 90, 3,-18,-1],[ 4, 18, 50,-7, 5, 2],
+];
 
 export default function RecordGallery3D() {
-  const [activeIndex, setActiveIndex] = useState(-1);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(-1);
+  const [mx, setMx] = useState(0);
+  const [my, setMy] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = containerRef.current;
+    const el = ref.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const dir = e.deltaY > 0 ? 1 : -1;
-      setActiveIndex(prev => {
-        const next = prev + dir;
-        if (next < 0) return CARDS.length - 1;
-        if (next >= CARDS.length) return 0;
-        return next;
+      setActive(p => {
+        const n = p + (e.deltaY > 0 ? 1 : -1);
+        return n < -1 ? CARDS.length - 1 : n >= CARDS.length ? -1 : n;
       });
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  return (
-    <section
-      id="companies"
-      ref={containerRef}
-      className="relative h-screen w-full"
-      data-lenis-prevent
-    >
-      <Canvas camera={{ position: [0, 0, 5], fov: 50 }} className="!absolute inset-0">
-        <ambientLight intensity={1.2} />
-        <Scene activeIndex={activeIndex} setActiveIndex={setActiveIndex} />
-      </Canvas>
+  const onMove = (e: React.MouseEvent) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setMx((e.clientX - r.left) / r.width - 0.5);
+    setMy((e.clientY - r.top) / r.height - 0.5);
+  };
 
-      {/* UI 覆盖层 */}
-      <div className="absolute bottom-8 left-8 z-10 pointer-events-none">
-        <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-1">
-          {activeIndex >= 0 ? `${String(activeIndex + 1).padStart(2, "0")} / ${CARDS.length}` : "scroll to browse"}
-        </p>
-        {activeIndex >= 0 && (
-          <h2 className="text-3xl font-bold text-white">
-            {CARDS[activeIndex].name}
-          </h2>
-        )}
+  return (
+    <section id="companies" ref={ref} onMouseMove={onMove} data-lenis-prevent
+      className="relative h-screen w-full overflow-hidden bg-[#0a0a0a]"
+      style={{ perspective: "1200px" }}>
+
+      {/* 整体容器 — 鼠标视差旋转 */}
+      <div className="absolute inset-0 flex items-center justify-center"
+        style={{
+          transformStyle: "preserve-3d",
+          transform: `rotateY(${mx * 12}deg) rotateX(${-my * 8}deg)`,
+          transition: "transform 0.15s ease-out",
+        }}>
+
+        {CARDS.map((card, i) => {
+          const [x, y, z, rx, ry, rz] = L[i];
+          const isActive = active === i;
+          const t = isActive
+            ? `translate3d(0, 0, 350px) rotateX(0deg) rotateY(0deg) rotateZ(-2deg) scale(1.15)`
+            : `translate3d(${x}%, ${y}%, ${z}px) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg)`;
+
+          return (
+            <a key={card.symbol} href={`/company/${card.symbol}`}
+              onClick={(e) => { if (!isActive) { e.preventDefault(); setActive(i); } }}
+              className="absolute rounded-xl overflow-hidden shadow-2xl cursor-pointer"
+              style={{
+                width: "220px", height: "300px",
+                transform: t,
+                opacity: active === -1 ? 1 : isActive ? 1 : 0.4,
+                zIndex: isActive ? 50 : 10,
+                transition: "all 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
+                transformStyle: "preserve-3d",
+              }}>
+              <img src={card.image} alt={card.name}
+                className="w-full h-full object-cover" draggable={false} />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+              <div className="absolute bottom-3 left-3 right-3">
+                <p className="text-white text-xs font-mono opacity-50">{card.symbol}</p>
+                <p className="text-white text-sm font-bold">{card.name}</p>
+              </div>
+            </a>
+          );
+        })}
       </div>
 
-      {activeIndex >= 0 && (
-        <div className="absolute bottom-8 right-8 z-10">
-          <a
-            href={`/company/${CARDS[activeIndex].symbol}`}
-            className="px-6 py-3 bg-white text-black rounded-full text-sm font-medium hover:bg-white/90 transition-colors"
-          >
-            View Report →
-          </a>
-        </div>
-      )}
+      {/* 底部信息 */}
+      <div className="absolute bottom-8 left-8 z-20 pointer-events-none">
+        <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest mb-1">
+          {active >= 0 ? `${String(active+1).padStart(2,"0")} / ${CARDS.length}` : "scroll to browse"}
+        </p>
+        {active >= 0 && <h2 className="text-2xl font-bold text-white">{CARDS[active].name}</h2>}
+      </div>
     </section>
   );
 }
