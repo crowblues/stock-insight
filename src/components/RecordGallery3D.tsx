@@ -18,14 +18,19 @@ const CARDS = [
 ];
 
 export default function RecordGallery3D() {
-  const [activeIndex, setActiveIndex] = useState(3);
+  const [activeIndex, setActiveIndex] = useState<number | null>(3);
   const lockRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const navigate = useCallback((dir: 1 | -1) => {
     if (lockRef.current) return;
     lockRef.current = true;
-    setActiveIndex(prev => Math.max(0, Math.min(CARDS.length - 1, prev + dir)));
+    setActiveIndex(prev => {
+      const cur = prev ?? 0;
+      const next = cur + dir;
+      if (next < 0 || next >= CARDS.length) return prev;
+      return next;
+    });
     setTimeout(() => { lockRef.current = false; }, 300);
   }, []);
 
@@ -42,63 +47,70 @@ export default function RecordGallery3D() {
     return () => el.removeEventListener("wheel", handler);
   }, [navigate]);
 
-  return (
-    <section className="relative min-h-screen flex items-center justify-center py-20" style={{ background: "#F5F4F0" }}>
-      <div ref={containerRef} data-lenis-prevent className="relative w-full max-w-4xl mx-auto px-4" style={{ perspective: "1200px", perspectiveOrigin: "center 35%" }}>
-        <div className="relative mx-auto" style={{ transform: "rotateX(52deg)", transformStyle: "preserve-3d" }}>
-          {CARDS.map((card, index) => {
-            const isActive = index === activeIndex;
-            const diff = index - activeIndex;
-            // 相邻卡片让位
-            const yOffset = isActive ? 0 : diff > 0 ? diff * 4 + 12 : diff * 4 - 12;
-            const baseTransform = isActive
-              ? "translateZ(100px) rotateX(-52deg) rotate(-2.5deg) scale(1.02)"
-              : `translateY(${yOffset}px) translateZ(${-Math.abs(diff) * 2}px)`;
+  const handleClick = (index: number) => {
+    setActiveIndex(prev => prev === index ? null : index);
+  };
 
-            return (
-              <div
-                key={card.symbol}
-                onClick={() => setActiveIndex(index)}
-                className="relative cursor-pointer"
-                style={{
-                  transform: baseTransform,
-                  transition: "all 0.5s cubic-bezier(0.22, 1, 0.36, 1)",
-                  zIndex: isActive ? 50 : 20 - Math.abs(diff),
-                  marginBottom: isActive ? "0" : "-2px",
-                }}
-              >
-                {isActive ? (
-                  /* ═══ 展开态 ═══ */
-                  <div className="bg-[#1a1a1a] rounded-xl border-2 border-white/80 shadow-[0_10px_60px_rgba(0,0,0,0.4)] p-5 flex gap-5 items-start min-h-[120px]">
-                    <img src={card.image} alt={card.name} className="w-20 h-20 rounded-lg object-cover shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white/50 text-xs font-mono mb-0.5">{card.symbol}</p>
-                      <h3 className="text-white text-xl font-bold">{card.name} <span className="text-white/50 text-sm font-normal">{card.sub}</span></h3>
-                      <p className="text-white/60 text-sm mt-1.5 leading-relaxed">{card.desc}</p>
-                      <div className="flex items-center gap-2 mt-3">
-                        <Link href={`/company/${card.symbol}`} className="px-4 py-1.5 bg-white text-black text-xs rounded-full font-medium hover:bg-gray-200 transition-colors">查看报告 →</Link>
-                        {card.tags.map(t => (<span key={t} className="px-2.5 py-1 text-[10px] rounded-full bg-white/10 text-white/70">{t}</span>))}
-                      </div>
+  return (
+    <section className="relative min-h-screen flex items-center justify-center py-16" style={{ background: "#F5F4F0" }}>
+      <div
+        ref={containerRef}
+        data-lenis-prevent
+        className="relative w-full max-w-2xl mx-auto px-4 flex flex-col"
+        style={{ perspective: "1000px", perspectiveOrigin: "center 30%" }}
+      >
+        {CARDS.map((card, index) => {
+          const isActive = index === activeIndex;
+          // 微妙透视：上面的卡片稍远(窄)，下面的稍近(宽)
+          const zDepth = ((index - 6) / 6) * 30; // -30 到 +30
+          const transform = isActive
+            ? "translateX(-40px) translateZ(60px) rotate(-2.5deg)"
+            : `translateZ(${zDepth}px)`;
+
+          return (
+            <div
+              key={card.symbol}
+              onClick={() => handleClick(index)}
+              className="relative cursor-pointer"
+              style={{
+                transform,
+                transformStyle: "preserve-3d",
+                transition: "all 0.5s cubic-bezier(0.22, 1, 0.36, 1)",
+                zIndex: isActive ? 50 : 10,
+                marginBottom: "2px",
+                border: isActive ? "1px solid rgba(255,255,255,0.3)" : "none",
+                borderRadius: isActive ? "12px" : "8px",
+                boxShadow: isActive ? "0 20px 60px rgba(0,0,0,0.4)" : "none",
+              }}
+            >
+              {isActive ? (
+                <div className="bg-[#1a1a1a] rounded-xl p-5 flex gap-5 items-start">
+                  <img src={card.image} alt={card.name} className="w-20 h-20 rounded-lg object-cover shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white/50 text-xs font-mono mb-0.5">{card.symbol}</p>
+                    <h3 className="text-white text-xl font-bold">{card.name} <span className="text-white/50 text-sm font-normal">{card.sub}</span></h3>
+                    <p className="text-white/60 text-sm mt-1.5 leading-relaxed">{card.desc}</p>
+                    <div className="flex items-center gap-2 mt-3">
+                      <Link href={`/company/${card.symbol}`} onClick={e => e.stopPropagation()} className="px-4 py-1.5 bg-white text-black text-xs rounded-full font-medium hover:bg-gray-200 transition-colors">查看报告 →</Link>
+                      {card.tags.map(t => (<span key={t} className="px-2.5 py-1 text-[10px] rounded-full bg-white/10 text-white/70">{t}</span>))}
                     </div>
                   </div>
-                ) : (
-                  /* ═══ 收起态 ═══ */
-                  <div className="bg-[#1a1a1a] h-[46px] rounded-lg flex items-center px-5 gap-3 hover:bg-[#2a2a2a] transition-colors">
-                    <img src={card.image} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
-                    <span className="text-white/90 text-sm font-medium truncate">{card.name}</span>
-                    <span className="text-white/30 text-xs font-mono">{card.symbol}</span>
-                    <div className="ml-auto flex gap-1.5">
-                      {card.tags.map(t => (<span key={t} className="px-2 py-0.5 text-[9px] rounded-full bg-white/5 text-white/40">{t}</span>))}
-                    </div>
+                </div>
+              ) : (
+                <div className="bg-[#1a1a1a] h-[46px] rounded-lg flex items-center px-5 gap-3 hover:bg-[#252525] transition-colors">
+                  <img src={card.image} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
+                  <span className="text-white/90 text-sm font-medium truncate">{card.name}</span>
+                  <span className="text-white/30 text-xs font-mono">{card.symbol}</span>
+                  <div className="ml-auto flex gap-1.5">
+                    {card.tags.map(t => (<span key={t} className="px-2 py-0.5 text-[9px] rounded-full bg-white/5 text-white/40">{t}</span>))}
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
-      {/* 底部提示 */}
-      <p className="absolute bottom-8 left-1/2 -translate-x-1/2 text-gray-400 text-xs tracking-widest">↕ 滚轮切换</p>
+      <p className="absolute bottom-6 left-1/2 -translate-x-1/2 text-gray-400 text-xs tracking-widest">↕ 滚轮 · 点击切换</p>
     </section>
   );
 }
