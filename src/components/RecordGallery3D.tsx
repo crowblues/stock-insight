@@ -2,32 +2,22 @@
 import { useState, useRef, useEffect } from "react";
 
 const CARDS = [
-  { symbol: "AAPL", name: "Apple", image: "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?w=600&q=80" },
-  { symbol: "MSFT", name: "Microsoft", image: "https://images.unsplash.com/photo-1633419461186-7d40a38105ec?w=600&q=80" },
-  { symbol: "NVDA", name: "NVIDIA", image: "https://images.unsplash.com/photo-1625842268584-8f3296236761?w=600&q=80" },
-  { symbol: "GOOGL", name: "Alphabet", image: "https://images.unsplash.com/photo-1573804633927-bfcbcd909acd?w=600&q=80" },
-  { symbol: "AMZN", name: "Amazon", image: "https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?w=600&q=80" },
-  { symbol: "TSLA", name: "Tesla", image: "https://images.unsplash.com/photo-1617788138017-80ad40651399?w=600&q=80" },
-  { symbol: "META", name: "Meta", image: "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&q=80" },
-  { symbol: "JPM", name: "JPMorgan", image: "https://images.unsplash.com/photo-1501167786227-4cba60f6d58f?w=600&q=80" },
-  { symbol: "V", name: "Visa", image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=600&q=80" },
-  { symbol: "AVGO", name: "Broadcom", image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&q=80" },
-  { symbol: "UNH", name: "UnitedHealth", image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600&q=80" },
-  { symbol: "BRK.B", name: "Berkshire", image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&q=80" },
-];
-
-// 每张卡片在3D空间的散落坐标: [x%, y%, z(px), rotateX, rotateY, rotateZ]
-const L: number[][] = [
-  [-28,-8, 40, 8,-25,-3],[-12, 6,100,-4,-15, 2],[ 0,-16,160, 6,-8,-1],
-  [ 12, 3,120,-3, 12, 2],[ 22,-6, 60, 5, 20,-2],[ 30, 8,140,-6, 28, 3],
-  [-24,14,180, 4,-20,-2],[ -6,-3, 20,-5, -5, 1],[ 14,12, 80, 7, 15,-1],
-  [ 26,-12,200,-2, 22, 2],[-18,-20, 90, 3,-18,-1],[ 4, 18, 50,-7, 5, 2],
+  { symbol: "AAPL", name: "Apple Inc.", desc: "Hardware ecosystem meets AI services.", tags: ["Tech","AI"], image: "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?w=200&q=80" },
+  { symbol: "MSFT", name: "Microsoft", desc: "Azure momentum and Copilot monetization.", tags: ["Cloud","SaaS"], image: "https://images.unsplash.com/photo-1633419461186-7d40a38105ec?w=200&q=80" },
+  { symbol: "NVDA", name: "NVIDIA", desc: "Monopolistic GPU supplier in AI supercycle.", tags: ["Semi","AI"], image: "https://images.unsplash.com/photo-1625842268584-8f3296236761?w=200&q=80" },
+  { symbol: "GOOGL", name: "Alphabet", desc: "Search dominance meets Gemini AI.", tags: ["Ads","Cloud"], image: "https://images.unsplash.com/photo-1573804633927-bfcbcd909acd?w=200&q=80" },
+  { symbol: "AMZN", name: "Amazon", desc: "Dual flywheel reaching profit inflection.", tags: ["Cloud","EC"], image: "https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?w=200&q=80" },
+  { symbol: "TSLA", name: "Tesla", desc: "FSD autonomy, Optimus robotics, energy.", tags: ["Auto","AI"], image: "https://images.unsplash.com/photo-1617788138017-80ad40651399?w=200&q=80" },
+  { symbol: "META", name: "Meta Platforms", desc: "Social ads powerhouse betting on AI and MR.", tags: ["Ads","VR"], image: "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=200&q=80" },
+  { symbol: "JPM", name: "JPMorgan Chase", desc: "America's largest bank, unmatched scale.", tags: ["Finance"], image: "https://images.unsplash.com/photo-1501167786227-4cba60f6d58f?w=200&q=80" },
+  { symbol: "V", name: "Visa Inc.", desc: "Global payments duopoly with 65% margins.", tags: ["Fintech"], image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=200&q=80" },
+  { symbol: "AVGO", name: "Broadcom", desc: "Custom AI chips and VMware integration.", tags: ["Semi","AI"], image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=200&q=80" },
+  { symbol: "UNH", name: "UnitedHealth", desc: "Vertically integrated health services.", tags: ["Health"], image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=200&q=80" },
+  { symbol: "BRK.B", name: "Berkshire", desc: "Buffett's empire: insurance, energy, rails.", tags: ["Value"], image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=200&q=80" },
 ];
 
 export default function RecordGallery3D() {
   const [active, setActive] = useState(-1);
-  const [mx, setMx] = useState(0);
-  const [my, setMy] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,70 +27,89 @@ export default function RecordGallery3D() {
       e.preventDefault();
       setActive(p => {
         const n = p + (e.deltaY > 0 ? 1 : -1);
-        return n < -1 ? CARDS.length - 1 : n >= CARDS.length ? -1 : n;
+        if (n < -1) return CARDS.length - 1;
+        if (n >= CARDS.length) return -1;
+        return n;
       });
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  const onMove = (e: React.MouseEvent) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    setMx((e.clientX - r.left) / r.width - 0.5);
-    setMy((e.clientY - r.top) / r.height - 0.5);
-  };
-
   return (
-    <section id="companies" ref={ref} onMouseMove={onMove} data-lenis-prevent
-      className="relative h-screen w-full overflow-hidden bg-[#0a0a0a]"
-      style={{ perspective: "1200px" }}>
+    <section id="companies" ref={ref} data-lenis-prevent
+      className="relative min-h-screen flex items-center justify-center py-20 bg-[#F5F4F0]"
+      style={{ perspective: "1800px" }}>
 
-      {/* 整体容器 — 鼠标视差旋转 */}
-      <div className="absolute inset-0 flex items-center justify-center"
-        style={{
-          transformStyle: "preserve-3d",
-          transform: `rotateY(${mx * 12}deg) rotateX(${-my * 8}deg)`,
-          transition: "transform 0.15s ease-out",
-        }}>
-
+      {/* 透视堆叠容器 — rotateX 制造俯视角度 */}
+      <div className="relative" style={{
+        transformStyle: "preserve-3d",
+        transform: "rotateX(48deg) rotateZ(-1deg)",
+        transformOrigin: "center center",
+      }}>
         {CARDS.map((card, i) => {
-          const [x, y, z, rx, ry, rz] = L[i];
           const isActive = active === i;
-          const t = isActive
-            ? `translate3d(0, 0, 350px) rotateX(0deg) rotateY(0deg) rotateZ(-2deg) scale(1.15)`
-            : `translate3d(${x}%, ${y}%, ${z}px) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg)`;
+          const cardStyle: React.CSSProperties = {
+            transformStyle: "preserve-3d",
+            transition: "all 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+            transform: isActive
+              ? "translateZ(120px) rotateX(-48deg) rotateZ(3deg) scale(1.05)"
+              : "translateZ(0px)",
+            zIndex: isActive ? 50 : CARDS.length - i,
+            marginBottom: "4px",
+          };
 
           return (
-            <a key={card.symbol} href={`/company/${card.symbol}`}
-              onClick={(e) => { if (!isActive) { e.preventDefault(); setActive(i); } }}
-              className="absolute rounded-xl overflow-hidden shadow-2xl cursor-pointer"
-              style={{
-                width: "220px", height: "300px",
-                transform: t,
-                opacity: active === -1 ? 1 : isActive ? 1 : 0.4,
-                zIndex: isActive ? 50 : 10,
-                transition: "all 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
-                transformStyle: "preserve-3d",
-              }}>
-              <img src={card.image} alt={card.name}
-                className="w-full h-full object-cover" draggable={false} />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-              <div className="absolute bottom-3 left-3 right-3">
-                <p className="text-white text-xs font-mono opacity-50">{card.symbol}</p>
-                <p className="text-white text-sm font-bold">{card.name}</p>
-              </div>
-            </a>
+            <div key={card.symbol} style={cardStyle}
+              className="cursor-pointer"
+              onClick={() => setActive(isActive ? -1 : i)}>
+              {isActive ? (
+                <ExpandedCard card={card} />
+              ) : (
+                <CollapsedCard card={card} />
+              )}
+            </div>
           );
         })}
       </div>
-
-      {/* 底部信息 */}
-      <div className="absolute bottom-8 left-8 z-20 pointer-events-none">
-        <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest mb-1">
-          {active >= 0 ? `${String(active+1).padStart(2,"0")} / ${CARDS.length}` : "scroll to browse"}
-        </p>
-        {active >= 0 && <h2 className="text-2xl font-bold text-white">{CARDS[active].name}</h2>}
-      </div>
     </section>
+  );
+}
+
+function CollapsedCard({ card }: { card: typeof CARDS[number] }) {
+  return (
+    <div className="w-[500px] h-[44px] bg-[#1a1a1a] rounded-lg flex items-center px-4 gap-3 shadow-md">
+      <img src={card.image} alt="" className="w-7 h-7 rounded object-cover shrink-0" />
+      <span className="text-white/70 text-[11px] font-mono truncate flex-1">{card.symbol} · {card.name}</span>
+      <div className="flex gap-1 shrink-0">
+        {card.tags.map(t => (
+          <span key={t} className="px-2 py-0.5 text-[9px] rounded bg-white/10 text-white/50 font-mono">{t}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ExpandedCard({ card }: { card: typeof CARDS[number] }) {
+  return (
+    <div className="w-[500px] bg-[#1a1a1a] rounded-xl p-5 shadow-2xl border border-white/10">
+      <div className="flex gap-4">
+        <img src={card.image} alt="" className="w-16 h-16 rounded-lg object-cover shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-white/40 text-[10px] font-mono">{card.symbol}</p>
+          <h3 className="text-white text-lg font-bold leading-tight">{card.name}</h3>
+          <p className="text-white/40 text-xs mt-1">{card.desc}</p>
+          <div className="flex gap-2 mt-3">
+            <a href={`/company/${card.symbol}`}
+              className="px-3 py-1 text-[10px] font-mono rounded bg-emerald-500 text-white">
+              Report
+            </a>
+            {card.tags.map(t => (
+              <span key={t} className="px-2 py-1 text-[10px] rounded bg-white/10 text-white/50 font-mono">{t}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
