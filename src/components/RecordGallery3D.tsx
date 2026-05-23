@@ -139,17 +139,21 @@ const CARDS: RecordCard[] = [
 ];
 
 const VISIBLE_COUNT = 10;
-const BASE_Y = -250;
-const ROW_STEP = 39;
-const BASE_WIDTH = 338;
-const WIDTH_STEP = 17;
+const BASE_Y = -305;
+const ROW_STEP = 49;
+const BASE_WIDTH = 370;
+const WIDTH_STEP = 7;
+const HIT_Y_OFFSET_BY_SLOT = [56, 35, 17, 1, -9, -15, -16, -9, 5, 0];
+const HIT_HEIGHT_BY_SLOT = [25, 29, 33, 37, 42, 47, 54, 62, 72, 82];
 
 export default function RecordGallery3D() {
   const router = useRouter();
   const [windowStart, setWindowStart] = useState(0);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [isRouting, setIsRouting] = useState(false);
   const deckRef = useRef<HTMLDivElement>(null);
   const wheelLockRef = useRef(0);
+  const routeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const layout = useMemo(
     () => {
@@ -161,22 +165,41 @@ export default function RecordGallery3D() {
       return visibleCards.map(({ card, index, slot }) => {
         const isActive = index === activeIndex;
         const activeSlot = visibleCards.find((item) => item.index === activeIndex)?.slot ?? null;
+        const beforeActive = activeSlot !== null && slot < activeSlot;
         const afterActive = activeSlot !== null && slot > activeSlot;
+        const activeGap = beforeActive ? (isRouting ? -54 : -34) : afterActive ? (isRouting ? 62 : 38) : 0;
+        const activeLift = isActive && isRouting ? 28 : 0;
         return {
           card,
           index,
           slot,
-          y: BASE_Y + slot * ROW_STEP + (afterActive ? 14 : 0),
-          z: -260 + slot * 36 + (isActive ? 66 : 0),
-          width: BASE_WIDTH + slot * WIDTH_STEP + (isActive ? 18 : 0),
-          height: isActive ? 88 : Math.min(68 + slot * 2.1, 84),
+          y: BASE_Y + slot * ROW_STEP + activeGap + activeLift,
+          z: -215 + slot * 22 + (isActive ? (isRouting ? 168 : 68) : 0),
+          width: BASE_WIDTH + slot * WIDTH_STEP + (isActive ? (isRouting ? 96 : 22) : 0),
+          height: isActive ? (isRouting ? 132 : 92) : Math.min(70 + slot * 1.6, 84),
           tilt: isActive ? -28 : -26,
-          roll: isActive ? -1.6 : 0,
+          roll: isActive ? -1.3 : 0,
         };
       });
     },
-    [activeIndex, windowStart],
+    [activeIndex, isRouting, windowStart],
   );
+
+  const handleCardClick = (index: number, symbol: string) => {
+    if (routeTimerRef.current) return;
+
+    if (activeIndex !== index) {
+      setActiveIndex(index);
+      setIsRouting(false);
+      return;
+    }
+
+    setActiveIndex(index);
+    setIsRouting(true);
+    routeTimerRef.current = setTimeout(() => {
+      router.push(`/company/${symbol}`);
+    }, 720);
+  };
 
   useEffect(() => {
     const deck = deckRef.current;
@@ -189,6 +212,8 @@ export default function RecordGallery3D() {
       event.preventDefault();
       event.stopPropagation();
 
+      if (isRouting) return;
+
       const now = performance.now();
       if (now - wheelLockRef.current < 150) return;
       wheelLockRef.current = now;
@@ -199,6 +224,12 @@ export default function RecordGallery3D() {
 
     deck.addEventListener("wheel", handleWheel, { passive: false });
     return () => deck.removeEventListener("wheel", handleWheel);
+  }, [isRouting]);
+
+  useEffect(() => {
+    return () => {
+      if (routeTimerRef.current) clearTimeout(routeTimerRef.current);
+    };
   }, []);
 
   return (
@@ -226,9 +257,8 @@ export default function RecordGallery3D() {
             ref={deckRef}
             data-lenis-prevent
             className="relative mx-auto h-[650px] w-full touch-none"
-            onMouseLeave={() => setActiveIndex(null)}
             style={{
-              perspective: "400px",
+              perspective: "560px",
               perspectiveOrigin: "50% 35%",
             }}
           >
@@ -259,7 +289,13 @@ export default function RecordGallery3D() {
                 };
 
                 return (
-                  <article key={card.symbol} className="pointer-events-none absolute select-none text-white" style={cardStyle}>
+                  <article
+                    key={card.symbol}
+                    data-card-symbol={card.symbol}
+                    data-card-active={isActive ? "true" : "false"}
+                    className="pointer-events-none absolute select-none text-white"
+                    style={cardStyle}
+                  >
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0)_42%,rgba(0,0,0,0.2))]" />
                     <div
                       className="absolute right-3 top-2 rounded-[4px] px-2 py-0.5 font-mono text-[10px] font-bold text-[#101211]"
@@ -327,9 +363,9 @@ export default function RecordGallery3D() {
               {layout.map(({ card, index, slot, y, width }) => {
                 const isActive = index === activeIndex;
                 const isFrontCard = slot === VISIBLE_COUNT - 1;
-                const hitY = y + (isFrontCard ? (isActive ? 82 : 36) : 4);
+                const hitY = y + (isFrontCard ? (isActive ? 82 : 26) : 4 + HIT_Y_OFFSET_BY_SLOT[slot]);
                 const hitWidth = Math.max(170, width + (isFrontCard ? (isActive ? 140 : 70) : -18));
-                const hitHeight = isFrontCard ? (isActive ? 132 : 82) : 48;
+                const hitHeight = isFrontCard ? (isActive ? 132 : 82) : HIT_HEIGHT_BY_SLOT[slot];
 
                 return (
                   <button
@@ -348,10 +384,7 @@ export default function RecordGallery3D() {
                       transform: "translate(-50%, -50%)",
                       zIndex: slot + 1,
                     }}
-                    onMouseEnter={() => setActiveIndex(index)}
-                    onMouseMove={() => setActiveIndex(index)}
-                    onFocus={() => setActiveIndex(index)}
-                    onClick={() => router.push(`/company/${card.symbol}`)}
+                    onClick={() => handleCardClick(index, card.symbol)}
                   />
                 );
               })}

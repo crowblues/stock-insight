@@ -1,8 +1,21 @@
 "use client";
 
 import RecordGallery3D from "@/components/RecordGallery3D";
+import { useEffect, useState } from "react";
 
 export default function HomePage() {
+  const [hasEntered, setHasEntered] = useState(false);
+
+  useEffect(() => {
+    if (!hasEntered) return;
+
+    const timer = window.setTimeout(() => {
+      document.getElementById("companies")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+
+    return () => window.clearTimeout(timer);
+  }, [hasEntered]);
+
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#0b0b0b] text-white">
       <section
@@ -25,15 +38,16 @@ export default function HomePage() {
           <div className="absolute -right-3 bottom-24 h-36 w-28 rotate-[-24deg] rounded-[48%] bg-[#eaa2b2]/60" />
         </div>
 
-        <a
-          href="#companies"
+        <button
+          type="button"
           aria-label="Enter the chill zone"
+          onClick={() => setHasEntered(true)}
           className="group relative z-10 flex h-[min(76vh,760px)] w-full max-w-[1320px] items-center justify-center bg-[#030613] shadow-[0_26px_70px_rgba(35,44,28,0.26)] outline-none transition duration-500 hover:bg-[#040817] focus-visible:ring-2 focus-visible:ring-[#f95372]"
         >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_49%,rgba(246,71,102,0.12),transparent_15%),linear-gradient(180deg,rgba(255,255,255,0.02),transparent_18%,rgba(0,0,0,0.18))]" />
 
           <div className="relative flex -translate-y-4 flex-col items-center">
-            <div className="relative h-[86px] w-[152px] rounded-[8px] bg-[#f65370] shadow-[0_0_26px_rgba(246,83,112,0.42),0_16px_40px_rgba(0,0,0,0.36)] transition duration-500 group-hover:-translate-y-1 group-hover:scale-[1.04]">
+            <div className="relative h-[86px] w-[152px] rounded-[8px] bg-[#f65370] shadow-[0_0_26px_rgba(246,83,112,0.42),0_16px_40px_rgba(0,0,0,0.36)] transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-3 group-hover:scale-[1.14] group-hover:rotate-[-1.5deg] group-hover:shadow-[0_0_36px_rgba(246,83,112,0.56),0_24px_56px_rgba(0,0,0,0.44)]">
               <div className="absolute -top-9 left-[82px] h-11 w-px rotate-[-10deg] bg-[#42475b]" />
               <div className="absolute left-5 top-4 h-4 w-[104px] rounded-sm bg-[#080a13]" />
               <div className="absolute left-7 top-[21px] h-0.5 w-16 bg-[#f1b3c0]/80" />
@@ -50,22 +64,26 @@ export default function HomePage() {
               Enter the chill zone
             </span>
           </div>
-        </a>
+        </button>
       </section>
 
-      <RecordGallery3D />
+      {hasEntered && (
+        <>
+          <RecordGallery3D />
 
-      <footer className="border-t border-white/5 bg-[#080808] px-6 py-8">
-        <div className="mx-auto flex max-w-[1320px] items-center justify-between">
-          <span className="font-mono text-xs text-white/25">Stock Insight 2026</span>
-          <a
-            href="#hero"
-            className="font-mono text-xs uppercase tracking-[0.22em] text-white/25 transition hover:text-white/70"
-          >
-            Back to top
-          </a>
-        </div>
-      </footer>
+          <footer className="border-t border-white/5 bg-[#080808] px-6 py-8">
+            <div className="mx-auto flex max-w-[1320px] items-center justify-between">
+              <span className="font-mono text-xs text-white/25">Stock Insight 2026</span>
+              <a
+                href="#hero"
+                className="font-mono text-xs uppercase tracking-[0.22em] text-white/25 transition hover:text-white/70"
+              >
+                Back to top
+              </a>
+            </div>
+          </footer>
+        </>
+      )}
     </main>
   );
 }
