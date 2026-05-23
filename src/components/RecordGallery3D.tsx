@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
@@ -145,44 +144,64 @@ const BASE_WIDTH = 370;
 const WIDTH_STEP = 7;
 const HIT_Y_OFFSET_BY_SLOT = [56, 35, 17, 1, -9, -15, -16, -9, 5, 0];
 const HIT_HEIGHT_BY_SLOT = [25, 29, 33, 37, 42, 47, 54, 62, 72, 82];
+const SCROLL_TRANSITION_MS = 220;
+const WHEEL_STEP_SIZE = 115;
+const MAX_WHEEL_STEP = 1;
+const EDGE_FADE_WIDTH = 0.86;
 
-export default function RecordGallery3D() {
+type RecordGallery3DProps = {
+  onBackToStart?: () => void;
+};
+
+export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps) {
   const router = useRouter();
-  const [windowStart, setWindowStart] = useState(0);
+  const [scrollPosition, setScrollPosition] = useState(0);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [isRouting, setIsRouting] = useState(false);
-  const deckRef = useRef<HTMLDivElement>(null);
-  const wheelLockRef = useRef(0);
+  const sectionRef = useRef<HTMLElement>(null);
+  const scrollPositionRef = useRef(0);
   const routeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const layout = useMemo(
     () => {
-      const visibleCards = Array.from({ length: VISIBLE_COUNT }, (_, slot) => {
-        const index = (windowStart + slot) % CARDS.length;
-        return { card: CARDS[index], index, slot };
+      const basePosition = Math.floor(scrollPosition);
+      const fractionalOffset = scrollPosition - basePosition;
+      const displayCards = Array.from({ length: VISIBLE_COUNT + 2 }, (_, position) => {
+        const slot = position - 1;
+        const index = (basePosition + slot + CARDS.length * 2) % CARDS.length;
+        const motionSlot = slot - fractionalOffset;
+        return { card: CARDS[index], index, slot, motionSlot };
       });
+      const activeMotionSlot = displayCards.find((item) => item.index === activeIndex)?.motionSlot ?? null;
 
-      return visibleCards.map(({ card, index, slot }) => {
+      return displayCards.map(({ card, index, slot, motionSlot }) => {
         const isActive = index === activeIndex;
-        const activeSlot = visibleCards.find((item) => item.index === activeIndex)?.slot ?? null;
-        const beforeActive = activeSlot !== null && slot < activeSlot;
-        const afterActive = activeSlot !== null && slot > activeSlot;
+        const beforeActive = activeMotionSlot !== null && motionSlot < activeMotionSlot;
+        const afterActive = activeMotionSlot !== null && motionSlot > activeMotionSlot;
         const activeGap = beforeActive ? (isRouting ? -54 : -34) : afterActive ? (isRouting ? 62 : 38) : 0;
         const activeLift = isActive && isRouting ? 28 : 0;
+        const topFade = motionSlot < 0 ? Math.max(0, 1 + motionSlot / EDGE_FADE_WIDTH) : 1;
+        const bottomFade = motionSlot > VISIBLE_COUNT - 1 ? Math.max(0, (VISIBLE_COUNT - motionSlot) / EDGE_FADE_WIDTH) : 1;
+        const opacity = Math.min(topFade, bottomFade);
+        const isClickableSlot = motionSlot >= -0.08 && motionSlot <= VISIBLE_COUNT - 0.92;
+
         return {
           card,
           index,
           slot,
-          y: BASE_Y + slot * ROW_STEP + activeGap + activeLift,
-          z: -215 + slot * 22 + (isActive ? (isRouting ? 168 : 68) : 0),
-          width: BASE_WIDTH + slot * WIDTH_STEP + (isActive ? (isRouting ? 96 : 22) : 0),
-          height: isActive ? (isRouting ? 132 : 92) : Math.min(70 + slot * 1.6, 84),
+          motionSlot,
+          opacity,
+          isClickableSlot,
+          y: BASE_Y + motionSlot * ROW_STEP + activeGap + activeLift,
+          z: -215 + motionSlot * 22 + (isActive ? (isRouting ? 168 : 68) : 0),
+          width: BASE_WIDTH + motionSlot * WIDTH_STEP + (isActive ? (isRouting ? 96 : 22) : 0),
+          height: isActive ? (isRouting ? 132 : 92) : Math.min(70 + motionSlot * 1.6, 84),
           tilt: isActive ? -28 : -26,
           roll: isActive ? -1.3 : 0,
         };
       });
     },
-    [activeIndex, isRouting, windowStart],
+    [activeIndex, isRouting, scrollPosition],
   );
 
   const handleCardClick = (index: number, symbol: string) => {
@@ -202,28 +221,27 @@ export default function RecordGallery3D() {
   };
 
   useEffect(() => {
-    const deck = deckRef.current;
-    if (!deck) return;
+    const section = sectionRef.current;
+    if (!section) return;
 
     const handleWheel = (event: WheelEvent) => {
-      const direction = Math.sign(event.deltaY);
-      if (direction === 0) return;
+      const stepDelta = Math.max(-MAX_WHEEL_STEP, Math.min(MAX_WHEEL_STEP, event.deltaY / WHEEL_STEP_SIZE));
+      if (Math.abs(stepDelta) < 0.02) return;
 
       event.preventDefault();
       event.stopPropagation();
 
       if (isRouting) return;
 
-      const now = performance.now();
-      if (now - wheelLockRef.current < 150) return;
-      wheelLockRef.current = now;
-
-      setWindowStart((current) => (current + (direction > 0 ? 1 : -1) + CARDS.length) % CARDS.length);
+      const nextPosition = (scrollPositionRef.current + stepDelta + CARDS.length) % CARDS.length;
+      scrollPositionRef.current = nextPosition;
       setActiveIndex(null);
+      setIsRouting(false);
+      setScrollPosition(nextPosition);
     };
 
-    deck.addEventListener("wheel", handleWheel, { passive: false });
-    return () => deck.removeEventListener("wheel", handleWheel);
+    section.addEventListener("wheel", handleWheel, { passive: false });
+    return () => section.removeEventListener("wheel", handleWheel);
   }, [isRouting]);
 
   useEffect(() => {
@@ -234,8 +252,10 @@ export default function RecordGallery3D() {
 
   return (
     <section
+      ref={sectionRef}
       id="companies"
-      className="relative flex min-h-screen items-center justify-center px-4 py-14 text-[#111]"
+      data-lenis-prevent
+      className="relative flex h-screen items-center justify-center overflow-hidden px-4 py-8 text-[#111]"
       style={{
         background:
           "linear-gradient(90deg, #c9dcb2 0%, #eef1dc 16%, #f5f3ed 50%, #e8f0cf 84%, #b7d392 100%)",
@@ -244,18 +264,17 @@ export default function RecordGallery3D() {
       <div className="pointer-events-none absolute left-0 top-0 h-full w-[18vw] min-w-40 bg-[linear-gradient(135deg,rgba(211,235,137,0.55),rgba(225,76,91,0.22)_48%,rgba(55,99,79,0.28))]" />
       <div className="pointer-events-none absolute right-0 top-0 h-full w-[18vw] min-w-40 bg-[linear-gradient(225deg,rgba(54,114,59,0.55),rgba(176,211,120,0.36)_50%,rgba(239,161,173,0.24))]" />
 
-      <div className="relative min-h-[760px] w-full max-w-[1320px] bg-[#f3f1ea] shadow-[0_24px_80px_rgba(42,56,31,0.18)]">
-        <Link
-          href="#hero"
-          className="absolute left-5 top-5 z-20 rounded-[5px] bg-[#57584f] px-4 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-white shadow-[0_10px_18px_rgba(0,0,0,0.22)] transition hover:bg-[#34362f]"
+      <div className="relative h-[min(760px,calc(100vh-64px))] min-h-[620px] w-full max-w-[1320px] bg-[#f3f1ea] shadow-[0_24px_80px_rgba(42,56,31,0.18)]">
+        <button
+          type="button"
+          onClick={onBackToStart}
+          className="absolute left-5 top-5 z-20 rounded-[5px] bg-[#57584f] px-4 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-white shadow-[0_10px_18px_rgba(0,0,0,0.22)] transition hover:bg-[#34362f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f65370]"
         >
           Back to start
-        </Link>
+        </button>
 
         <div className="absolute left-1/2 top-[49%] z-10 w-full max-w-[940px] -translate-x-1/2 -translate-y-1/2">
           <div
-            ref={deckRef}
-            data-lenis-prevent
             className="relative mx-auto h-[650px] w-full touch-none"
             style={{
               perspective: "560px",
@@ -263,20 +282,21 @@ export default function RecordGallery3D() {
             }}
           >
             <div className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}>
-              {layout.map(({ card, index, slot, y, z, width, height, tilt, roll }) => {
+              {layout.map(({ card, index, motionSlot, opacity, y, z, width, height, tilt, roll }) => {
                 const isActive = index === activeIndex;
                 const transform = `translate(-50%, -50%) translate3d(0, ${y}px, ${z}px) rotateX(${tilt}deg) rotateZ(${roll}deg) scaleX(${width / 560})`;
                 const cardStyle: CSSProperties = {
                   left: "50%",
                   top: "50%",
-                  zIndex: slot + 1,
+                  zIndex: isActive ? 70 : Math.max(0, Math.round(motionSlot) + 1),
                   width: "min(560px, 72vw)",
                   minHeight: height,
+                  opacity,
                   transform,
                   transformStyle: "preserve-3d",
                   transformOrigin: "50% 50%",
-                  transition:
-                    "transform 420ms cubic-bezier(0.22, 1, 0.36, 1), min-height 420ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 420ms ease, border-color 420ms ease",
+                  willChange: "transform, opacity",
+                  transition: `transform ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), min-height ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 420ms ease, border-color 420ms ease`,
                   border: isActive ? "1.5px solid rgba(255,255,255,0.8)" : "1px solid rgba(255,255,255,0.08)",
                   borderRadius: 7,
                   backgroundImage: `linear-gradient(90deg, rgba(4,5,5,0.97) 0%, rgba(8,9,10,0.88) 46%, rgba(10,12,12,0.74) 100%), url(${card.image})`,
@@ -356,16 +376,14 @@ export default function RecordGallery3D() {
             <div
               className="absolute inset-0 z-[100]"
               aria-hidden="true"
-              onMouseMove={(event) => {
-                if (event.target === event.currentTarget) setActiveIndex(null);
-              }}
             >
-              {layout.map(({ card, index, slot, y, width }) => {
+              {layout.filter(({ isClickableSlot }) => isClickableSlot).map(({ card, index, motionSlot, y, width }) => {
                 const isActive = index === activeIndex;
-                const isFrontCard = slot === VISIBLE_COUNT - 1;
-                const hitY = y + (isFrontCard ? (isActive ? 82 : 26) : 4 + HIT_Y_OFFSET_BY_SLOT[slot]);
-                const hitWidth = Math.max(170, width + (isFrontCard ? (isActive ? 140 : 70) : -18));
-                const hitHeight = isFrontCard ? (isActive ? 132 : 82) : HIT_HEIGHT_BY_SLOT[slot];
+                const hitSlot = Math.max(0, Math.min(VISIBLE_COUNT - 1, Math.round(motionSlot)));
+                const isFrontCard = hitSlot === VISIBLE_COUNT - 1;
+                const hitY = y + (isActive ? 28 : isFrontCard ? 26 : 4 + HIT_Y_OFFSET_BY_SLOT[hitSlot]);
+                const hitWidth = Math.max(190, width + (isActive ? 150 : isFrontCard ? 70 : -18));
+                const hitHeight = isActive ? 132 : isFrontCard ? 82 : HIT_HEIGHT_BY_SLOT[hitSlot];
 
                 return (
                   <button
@@ -382,7 +400,7 @@ export default function RecordGallery3D() {
                       height: hitHeight,
                       padding: 0,
                       transform: "translate(-50%, -50%)",
-                      zIndex: slot + 1,
+                      zIndex: isActive ? 90 : hitSlot + 1,
                     }}
                     onClick={() => handleCardClick(index, card.symbol)}
                   />

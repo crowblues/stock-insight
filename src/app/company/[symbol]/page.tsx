@@ -25,10 +25,10 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
           <h1 className="text-2xl font-bold text-[#20231d]">没有找到公司数据</h1>
           <p className="mt-3 text-sm text-[#6b6d65]">无法获取 {symbol.toUpperCase()} 的数据，请检查股票代码。</p>
           <Link
-            href="/"
+            href="/?view=cards"
             className="mt-6 inline-flex rounded-[5px] bg-[#4b4d45] px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-white transition hover:bg-[#30332d]"
           >
-            Back to start
+            Back to stack
           </Link>
         </section>
       </main>
@@ -41,7 +41,7 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
 
   return (
     <main
-      className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10 text-[#20231d]"
+      className="relative flex min-h-screen items-center justify-center overflow-x-hidden px-4 py-10 text-[#20231d]"
       style={{
         background:
           "linear-gradient(90deg, #c9dcb2 0%, #eef1dc 16%, #f5f3ed 50%, #e8f0cf 84%, #b7d392 100%)",
@@ -51,10 +51,10 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
       <div className="pointer-events-none absolute right-0 top-0 h-full w-[18vw] min-w-40 bg-[linear-gradient(225deg,rgba(54,114,59,0.5),rgba(176,211,120,0.34)_50%,rgba(239,161,173,0.22))]" />
 
       <Link
-        href="/"
-        className="absolute left-[max(24px,calc((100vw-1320px)/2+20px))] top-8 z-30 rounded-[5px] bg-[#57584f] px-4 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-white shadow-[0_10px_18px_rgba(0,0,0,0.22)] transition hover:bg-[#34362f]"
+        href="/?view=cards"
+        className="absolute left-[max(24px,calc((100vw-1320px)/2+20px))] top-8 z-30 rounded-[5px] bg-[#57584f] px-4 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-white shadow-[0_10px_18px_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 hover:bg-[#34362f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f65370]"
       >
-        Back to start
+        Back to stack
       </Link>
 
       <div className="relative flex min-h-[760px] w-full max-w-[1320px] items-center justify-center bg-[#f3f1ea] shadow-[0_24px_80px_rgba(42,56,31,0.18)]">
@@ -62,7 +62,10 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
         <div className="pointer-events-none absolute left-1/2 top-[15%] h-8 w-[340px] -translate-x-1/2 rounded-[6px] bg-[#111313] opacity-85 shadow-[0_10px_26px_rgba(0,0,0,0.18)]" />
         <div className="pointer-events-none absolute bottom-[11%] left-1/2 h-8 w-[360px] -translate-x-1/2 rounded-[6px] bg-[#111313] opacity-90 shadow-[0_10px_26px_rgba(0,0,0,0.18)]" />
 
-        <article className="relative z-10 h-[min(72vh,590px)] w-[min(760px,86vw)] overflow-y-auto bg-white shadow-[0_26px_68px_rgba(28,31,24,0.28)]">
+        <article
+          data-lenis-prevent
+          className="relative z-10 h-[min(72vh,590px)] w-[min(760px,86vw)] overscroll-contain overflow-y-auto bg-white shadow-[0_26px_68px_rgba(28,31,24,0.28)]"
+        >
           <header className="px-8 pb-6 pt-7 text-center">
             <div className="mb-4 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-[#62645d]">
               <span>Stock Insight Archive</span>
