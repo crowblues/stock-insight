@@ -146,7 +146,9 @@ const HIT_Y_OFFSET_BY_SLOT = [56, 35, 17, 1, -9, -15, -16, -9, 5, 0];
 const HIT_HEIGHT_BY_SLOT = [25, 29, 33, 37, 42, 47, 54, 62, 72, 82];
 const SCROLL_TRANSITION_MS = 220;
 const WHEEL_STEP_SIZE = 115;
+const TOUCH_STEP_SIZE = 86;
 const MAX_WHEEL_STEP = 1;
+const MAX_TOUCH_STEP = 0.62;
 const EDGE_FADE_WIDTH = 0.86;
 
 type RecordGallery3DProps = {
@@ -160,6 +162,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   const [isRouting, setIsRouting] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const scrollPositionRef = useRef(0);
+  const touchYRef = useRef<number | null>(null);
   const routeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const layout = useMemo(
@@ -224,15 +227,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     const section = sectionRef.current;
     if (!section) return;
 
-    const handleWheel = (event: WheelEvent) => {
-      const stepDelta = Math.max(-MAX_WHEEL_STEP, Math.min(MAX_WHEEL_STEP, event.deltaY / WHEEL_STEP_SIZE));
-      if (Math.abs(stepDelta) < 0.02) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      if (isRouting) return;
-
+    const moveCardsBy = (stepDelta: number) => {
       const nextPosition = (scrollPositionRef.current + stepDelta + CARDS.length) % CARDS.length;
       scrollPositionRef.current = nextPosition;
       setActiveIndex(null);
@@ -240,9 +235,84 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
       setScrollPosition(nextPosition);
     };
 
-    section.addEventListener("wheel", handleWheel, { passive: false });
-    return () => section.removeEventListener("wheel", handleWheel);
+    const handleWheel = (event: WheelEvent) => {
+      if (!section.contains(event.target as Node)) return;
+
+      if (event.cancelable) event.preventDefault();
+      event.stopPropagation();
+
+      const stepDelta = Math.max(-MAX_WHEEL_STEP, Math.min(MAX_WHEEL_STEP, event.deltaY / WHEEL_STEP_SIZE));
+      if (Math.abs(stepDelta) < 0.02) return;
+
+      if (isRouting) return;
+
+      moveCardsBy(stepDelta);
+    };
+
+    const handleTouchStart = (event: TouchEvent) => {
+      touchYRef.current = event.touches[0]?.clientY ?? null;
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (event.cancelable) event.preventDefault();
+      event.stopPropagation();
+
+      const nextY = event.touches[0]?.clientY;
+      const lastY = touchYRef.current;
+      if (nextY === undefined || lastY === null) return;
+
+      const deltaY = lastY - nextY;
+      touchYRef.current = nextY;
+      const stepDelta = Math.max(-MAX_TOUCH_STEP, Math.min(MAX_TOUCH_STEP, deltaY / TOUCH_STEP_SIZE));
+      if (Math.abs(stepDelta) < 0.018 || isRouting) return;
+
+      moveCardsBy(stepDelta);
+    };
+
+    const handleTouchEnd = () => {
+      touchYRef.current = null;
+    };
+
+    const wheelOptions: AddEventListenerOptions = { passive: false, capture: true };
+    const touchMoveOptions: AddEventListenerOptions = { passive: false };
+
+    window.addEventListener("wheel", handleWheel, wheelOptions);
+    section.addEventListener("touchstart", handleTouchStart, { passive: true });
+    section.addEventListener("touchmove", handleTouchMove, touchMoveOptions);
+    section.addEventListener("touchend", handleTouchEnd);
+    section.addEventListener("touchcancel", handleTouchEnd);
+
+    return () => {
+      window.removeEventListener("wheel", handleWheel, wheelOptions);
+      section.removeEventListener("touchstart", handleTouchStart);
+      section.removeEventListener("touchmove", handleTouchMove, touchMoveOptions);
+      section.removeEventListener("touchend", handleTouchEnd);
+      section.removeEventListener("touchcancel", handleTouchEnd);
+    };
   }, [isRouting]);
+
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const previous = {
+      htmlOverflow: html.style.overflow,
+      htmlOverscrollBehavior: html.style.overscrollBehavior,
+      bodyOverflow: body.style.overflow,
+      bodyOverscrollBehavior: body.style.overscrollBehavior,
+    };
+
+    html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+
+    return () => {
+      html.style.overflow = previous.htmlOverflow;
+      html.style.overscrollBehavior = previous.htmlOverscrollBehavior;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.overscrollBehavior = previous.bodyOverscrollBehavior;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -255,7 +325,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
       ref={sectionRef}
       id="companies"
       data-lenis-prevent
-      className="relative flex h-screen items-center justify-center overflow-hidden px-4 py-8 text-[#111]"
+      className="relative flex h-[100svh] touch-none items-center justify-center overflow-hidden overscroll-none px-4 py-8 text-[#111]"
       style={{
         background:
           "linear-gradient(90deg, #c9dcb2 0%, #eef1dc 16%, #f5f3ed 50%, #e8f0cf 84%, #b7d392 100%)",
@@ -264,7 +334,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
       <div className="pointer-events-none absolute left-0 top-0 h-full w-[18vw] min-w-40 bg-[linear-gradient(135deg,rgba(211,235,137,0.55),rgba(225,76,91,0.22)_48%,rgba(55,99,79,0.28))]" />
       <div className="pointer-events-none absolute right-0 top-0 h-full w-[18vw] min-w-40 bg-[linear-gradient(225deg,rgba(54,114,59,0.55),rgba(176,211,120,0.36)_50%,rgba(239,161,173,0.24))]" />
 
-      <div className="relative h-[min(760px,calc(100vh-64px))] min-h-[620px] w-full max-w-[1320px] bg-[#f3f1ea] shadow-[0_24px_80px_rgba(42,56,31,0.18)]">
+      <div className="relative h-[min(760px,calc(100svh-64px))] min-h-0 w-full max-w-[1320px] overflow-hidden overscroll-none bg-[#f3f1ea] shadow-[0_24px_80px_rgba(42,56,31,0.18)]">
         <button
           type="button"
           onClick={onBackToStart}
@@ -275,7 +345,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
 
         <div className="absolute left-1/2 top-[49%] z-10 w-full max-w-[940px] -translate-x-1/2 -translate-y-1/2">
           <div
-            className="relative mx-auto h-[650px] w-full touch-none"
+            className="relative mx-auto h-full max-h-[650px] min-h-[520px] w-full touch-none overscroll-none"
             style={{
               perspective: "560px",
               perspectiveOrigin: "50% 35%",
