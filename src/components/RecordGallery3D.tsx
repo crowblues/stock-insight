@@ -150,6 +150,9 @@ const TOUCH_STEP_SIZE = 86;
 const MAX_WHEEL_STEP = 1;
 const MAX_TOUCH_STEP = 0.62;
 const EDGE_FADE_WIDTH = 0.86;
+const MIN_CLICKABLE_OPACITY = 0.98;
+const CLICK_AFTER_SCROLL_DELAY_MS = 140;
+const CONFIRM_CLICK_DELAY_MS = 260;
 
 type RecordGallery3DProps = {
   onBackToStart?: () => void;
@@ -163,6 +166,8 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   const sectionRef = useRef<HTMLElement>(null);
   const scrollPositionRef = useRef(0);
   const touchYRef = useRef<number | null>(null);
+  const activeSinceRef = useRef(0);
+  const lastScrollAtRef = useRef(0);
   const routeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const layout = useMemo(
@@ -186,7 +191,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
         const topFade = motionSlot < 0 ? Math.max(0, 1 + motionSlot / EDGE_FADE_WIDTH) : 1;
         const bottomFade = motionSlot > VISIBLE_COUNT - 1 ? Math.max(0, (VISIBLE_COUNT - motionSlot) / EDGE_FADE_WIDTH) : 1;
         const opacity = Math.min(topFade, bottomFade);
-        const isClickableSlot = motionSlot >= -0.08 && motionSlot <= VISIBLE_COUNT - 0.92;
+        const isClickableSlot = opacity >= MIN_CLICKABLE_OPACITY && motionSlot >= 0 && motionSlot <= VISIBLE_COUNT - 1;
 
         return {
           card,
@@ -207,14 +212,19 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     [activeIndex, isRouting, scrollPosition],
   );
 
-  const handleCardClick = (index: number, symbol: string) => {
+  const handleCardClick = (index: number, symbol: string, eventTime: number) => {
+    const now = eventTime;
+    if (now - lastScrollAtRef.current < CLICK_AFTER_SCROLL_DELAY_MS) return;
     if (routeTimerRef.current) return;
 
     if (activeIndex !== index) {
+      activeSinceRef.current = now;
       setActiveIndex(index);
       setIsRouting(false);
       return;
     }
+
+    if (now - activeSinceRef.current < CONFIRM_CLICK_DELAY_MS) return;
 
     setActiveIndex(index);
     setIsRouting(true);
@@ -230,6 +240,8 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     const moveCardsBy = (stepDelta: number) => {
       const nextPosition = (scrollPositionRef.current + stepDelta + CARDS.length) % CARDS.length;
       scrollPositionRef.current = nextPosition;
+      activeSinceRef.current = 0;
+      lastScrollAtRef.current = performance.now();
       setActiveIndex(null);
       setIsRouting(false);
       setScrollPosition(nextPosition);
@@ -319,6 +331,25 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
       if (routeTimerRef.current) clearTimeout(routeTimerRef.current);
     };
   }, []);
+
+  const clickableCards = layout.filter(({ isClickableSlot }) => isClickableSlot).sort((a, b) => a.y - b.y);
+
+  const getHitMetrics = (item: (typeof clickableCards)[number]) => {
+    const isActive = item.index === activeIndex;
+    const hitSlot = Math.max(0, Math.min(VISIBLE_COUNT - 1, Math.round(item.motionSlot)));
+    const isFrontCard = hitSlot === VISIBLE_COUNT - 1;
+    const yOffset = isActive ? 28 : isFrontCard ? 26 : 4 + HIT_Y_OFFSET_BY_SLOT[hitSlot];
+    const centerY = item.y + yOffset;
+    const width = Math.max(190, item.width + (isActive ? 118 : isFrontCard ? 56 : -24));
+    const height = isActive ? 104 : isFrontCard ? 72 : HIT_HEIGHT_BY_SLOT[hitSlot];
+
+    return {
+      centerY,
+      height,
+      hitSlot,
+      width,
+    };
+  };
 
   return (
     <section
@@ -447,13 +478,22 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
               className="absolute inset-0 z-[100]"
               aria-hidden="true"
             >
-              {layout.filter(({ isClickableSlot }) => isClickableSlot).map(({ card, index, motionSlot, y, width }) => {
+              {clickableCards.map((item, order) => {
+                const { card, index } = item;
                 const isActive = index === activeIndex;
-                const hitSlot = Math.max(0, Math.min(VISIBLE_COUNT - 1, Math.round(motionSlot)));
-                const isFrontCard = hitSlot === VISIBLE_COUNT - 1;
-                const hitY = y + (isActive ? 28 : isFrontCard ? 26 : 4 + HIT_Y_OFFSET_BY_SLOT[hitSlot]);
-                const hitWidth = Math.max(190, width + (isActive ? 150 : isFrontCard ? 70 : -18));
-                const hitHeight = isActive ? 132 : isFrontCard ? 82 : HIT_HEIGHT_BY_SLOT[hitSlot];
+                const metrics = getHitMetrics(item);
+                const previousMetrics = clickableCards[order - 1] ? getHitMetrics(clickableCards[order - 1]) : null;
+                const nextMetrics = clickableCards[order + 1] ? getHitMetrics(clickableCards[order + 1]) : null;
+                const bandTop = previousMetrics
+                  ? (previousMetrics.centerY + metrics.centerY) / 2 + 3
+                  : metrics.centerY - metrics.height / 2;
+                const bandBottom = nextMetrics
+                  ? (metrics.centerY + nextMetrics.centerY) / 2 - 3
+                  : metrics.centerY + metrics.height / 2;
+                const safeTop = Math.max(metrics.centerY - metrics.height / 2, bandTop);
+                const safeBottom = Math.min(metrics.centerY + metrics.height / 2, bandBottom);
+                const hitHeight = Math.max(18, safeBottom - safeTop);
+                const hitY = (safeTop + safeBottom) / 2;
 
                 return (
                   <button
@@ -466,13 +506,13 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                       border: 0,
                       left: "50%",
                       top: `calc(50% + ${hitY}px)`,
-                      width: `${hitWidth}px`,
+                      width: `${metrics.width}px`,
                       height: hitHeight,
                       padding: 0,
                       transform: "translate(-50%, -50%)",
-                      zIndex: isActive ? 90 : hitSlot + 1,
+                      zIndex: isActive ? 90 : metrics.hitSlot + 1,
                     }}
-                    onClick={() => handleCardClick(index, card.symbol)}
+                    onClick={(event) => handleCardClick(index, card.symbol, event.timeStamp)}
                   />
                 );
               })}
