@@ -153,6 +153,8 @@ const EDGE_FADE_WIDTH = 0.86;
 const MIN_CLICKABLE_OPACITY = 0.98;
 const CLICK_AFTER_SCROLL_DELAY_MS = 140;
 const CONFIRM_CLICK_DELAY_MS = 260;
+const SWITCH_REOPEN_DELAY_MS = 92;
+const FRONT_ACTIVE_START = VISIBLE_COUNT - 1.45;
 
 type RecordGallery3DProps = {
   onBackToStart?: () => void;
@@ -168,6 +170,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   const touchYRef = useRef<number | null>(null);
   const activeSinceRef = useRef(0);
   const lastScrollAtRef = useRef(0);
+  const pendingActiveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const routeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const layout = useMemo(
@@ -181,13 +184,29 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
         return { card: CARDS[index], index, slot, motionSlot };
       });
       const activeMotionSlot = displayCards.find((item) => item.index === activeIndex)?.motionSlot ?? null;
+      const frontActiveMotion = activeMotionSlot !== null && activeMotionSlot > FRONT_ACTIVE_START;
 
       return displayCards.map(({ card, index, slot, motionSlot }) => {
         const isActive = index === activeIndex;
+        const isFrontActive = isActive && motionSlot > FRONT_ACTIVE_START;
         const beforeActive = activeMotionSlot !== null && motionSlot < activeMotionSlot;
         const afterActive = activeMotionSlot !== null && motionSlot > activeMotionSlot;
-        const activeGap = beforeActive ? (isRouting ? -54 : -34) : afterActive ? (isRouting ? 62 : 38) : 0;
-        const activeLift = isActive && isRouting ? 28 : 0;
+        const activeGap = beforeActive
+          ? frontActiveMotion
+            ? isRouting
+              ? -46
+              : -30
+            : isRouting
+              ? -54
+              : -34
+          : afterActive
+            ? isRouting
+              ? 62
+              : 38
+            : 0;
+        const activeLift = isActive ? (isRouting ? (isFrontActive ? -6 : 28) : isFrontActive ? -16 : 0) : 0;
+        const activeZBoost = isActive ? (isRouting ? (isFrontActive ? 86 : 168) : isFrontActive ? 18 : 68) : 0;
+        const activeWidthBoost = isActive ? (isRouting ? (isFrontActive ? 68 : 96) : isFrontActive ? 10 : 22) : 0;
         const topFade = motionSlot < 0 ? Math.max(0, 1 + motionSlot / EDGE_FADE_WIDTH) : 1;
         const bottomFade = motionSlot > VISIBLE_COUNT - 1 ? Math.max(0, (VISIBLE_COUNT - motionSlot) / EDGE_FADE_WIDTH) : 1;
         const opacity = Math.min(topFade, bottomFade);
@@ -201,11 +220,11 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
           opacity,
           isClickableSlot,
           y: BASE_Y + motionSlot * ROW_STEP + activeGap + activeLift,
-          z: -215 + motionSlot * 22 + (isActive ? (isRouting ? 168 : 68) : 0),
-          width: BASE_WIDTH + motionSlot * WIDTH_STEP + (isActive ? (isRouting ? 96 : 22) : 0),
-          height: isActive ? (isRouting ? 132 : 92) : Math.min(70 + motionSlot * 1.6, 84),
-          tilt: isActive ? -28 : -26,
-          roll: isActive ? -1.3 : 0,
+          z: -215 + motionSlot * 22 + activeZBoost,
+          width: BASE_WIDTH + motionSlot * WIDTH_STEP + activeWidthBoost,
+          height: isActive ? (isRouting ? (isFrontActive ? 118 : 132) : isFrontActive ? 88 : 92) : Math.min(70 + motionSlot * 1.6, 84),
+          tilt: isActive ? (isFrontActive ? -24 : -28) : -26,
+          roll: isActive ? (isFrontActive ? -0.45 : -1.3) : 0,
         };
       });
     },
@@ -218,9 +237,21 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     if (routeTimerRef.current) return;
 
     if (activeIndex !== index) {
+      setIsRouting(false);
+      if (pendingActiveTimerRef.current) clearTimeout(pendingActiveTimerRef.current);
+
+      if (activeIndex !== null) {
+        activeSinceRef.current = 0;
+        setActiveIndex(null);
+        pendingActiveTimerRef.current = setTimeout(() => {
+          activeSinceRef.current = performance.now();
+          setActiveIndex(index);
+        }, SWITCH_REOPEN_DELAY_MS);
+        return;
+      }
+
       activeSinceRef.current = now;
       setActiveIndex(index);
-      setIsRouting(false);
       return;
     }
 
@@ -242,6 +273,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
       scrollPositionRef.current = nextPosition;
       activeSinceRef.current = 0;
       lastScrollAtRef.current = performance.now();
+      if (pendingActiveTimerRef.current) clearTimeout(pendingActiveTimerRef.current);
       setActiveIndex(null);
       setIsRouting(false);
       setScrollPosition(nextPosition);
@@ -328,6 +360,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
 
   useEffect(() => {
     return () => {
+      if (pendingActiveTimerRef.current) clearTimeout(pendingActiveTimerRef.current);
       if (routeTimerRef.current) clearTimeout(routeTimerRef.current);
     };
   }, []);
@@ -385,6 +418,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
             <div className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}>
               {layout.map(({ card, index, motionSlot, opacity, y, z, width, height, tilt, roll }) => {
                 const isActive = index === activeIndex;
+                const motionDuration = activeIndex !== null || isActive ? 520 : SCROLL_TRANSITION_MS;
                 const transform = `translate(-50%, -50%) translate3d(0, ${y}px, ${z}px) rotateX(${tilt}deg) rotateZ(${roll}deg) scaleX(${width / 560})`;
                 const cardStyle: CSSProperties = {
                   left: "50%",
@@ -397,7 +431,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                   transformStyle: "preserve-3d",
                   transformOrigin: "50% 50%",
                   willChange: "transform, opacity",
-                  transition: `transform ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), min-height ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 420ms ease, border-color 420ms ease`,
+                  transition: `transform ${motionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), min-height ${motionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow ${motionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), border-color 420ms ease`,
                   border: isActive ? "1.5px solid rgba(255,255,255,0.8)" : "1px solid rgba(255,255,255,0.08)",
                   borderRadius: 7,
                   backgroundImage: `linear-gradient(90deg, rgba(4,5,5,0.97) 0%, rgba(8,9,10,0.88) 46%, rgba(10,12,12,0.74) 100%), url(${card.image})`,

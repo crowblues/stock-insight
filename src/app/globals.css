@@ -50,3 +50,115 @@ html.lenis, html.lenis body { height: auto; }
 }
 .animate-spin-slow { animation: spin-slow 30s linear infinite; }
 .animate-spin-reverse { animation: spin-reverse 20s linear infinite; }
+
+@keyframes report-stage-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes report-stage-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(16px) scale(0.972);
+  }
+}
+
+@keyframes report-panel-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 28px, 0) scale(0.94);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes report-panel-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0) scale(0.955);
+    filter: blur(8px);
+  }
+}
+
+@keyframes report-layer-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) rotate(0deg) scale(0.92);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.report-stage-inner {
+  animation: report-stage-in 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.report-panel {
+  border-radius: 7px;
+  transform-origin: 50% 62%;
+  animation: report-panel-in 680ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+  will-change: transform, opacity, filter;
+}
+
+.report-depth-layer {
+  border-radius: 7px;
+  transform-origin: 50% 55%;
+  animation: report-layer-in 760ms cubic-bezier(0.16, 1, 0.3, 1) 40ms both;
+}
+
+.report-depth-layer-a {
+  opacity: 0.88;
+}
+
+.report-depth-layer-b {
+  opacity: 0.92;
+}
+
+.report-back-button {
+  animation: report-stage-in 560ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+}
+
+.report-stage-leaving .report-stage-inner {
+  animation: report-stage-out 300ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.report-stage-leaving .report-panel {
+  animation: report-panel-out 280ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.report-stage-leaving .report-back-button {
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .report-stage-inner,
+  .report-panel,
+  .report-depth-layer,
+  .report-back-button,
+  .report-stage-leaving .report-stage-inner,
+  .report-stage-leaving .report-panel {
+    animation: none;
+  }
+}
