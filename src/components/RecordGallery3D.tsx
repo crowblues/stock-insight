@@ -966,8 +966,8 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                 const cardAnimate = {
                   y: isExpanded ? 0 : visual.y,
                   z: isExpandedOrClosing ? 0 : visual.z,
-                  rotateX: isExpanded ? 0 : visual.tilt,
-                  rotateZ: isExpanded ? 0 : visual.roll,
+                  rotateX: isExpandedOrClosing ? 0 : visual.tilt,
+                  rotateZ: isExpandedOrClosing ? 0 : visual.roll,
                   scaleX: isExpanded ? 1 : visual.scaleX,
                   width: isExpanded ? expandW : stackWidth,
                   height: isExpanded ? expandH : visual.height,
@@ -1025,8 +1025,10 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                     }}
                     onAnimationComplete={() => {
                       if (closingSymbol === card.symbol) {
-                        setClosingSymbol(null);
-                        activeSinceRef.current = performance.now();
+                        requestAnimationFrame(() => {
+                          setClosingSymbol(null);
+                          activeSinceRef.current = performance.now();
+                        });
                       }
                     }}
                   >
