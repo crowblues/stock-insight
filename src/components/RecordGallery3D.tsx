@@ -357,7 +357,6 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [isRouting, setIsRouting] = useState(false);
   const [detailOverlay, setDetailOverlay] = useState<DetailOverlayState | null>(null);
-  const [hiddenCardSymbol, setHiddenCardSymbol] = useState<string | null>(null);
   const [detailCache, setDetailCache] = useState<Record<string, CompanyDetailPayload>>({});
   const [detailHeavyReadySymbol, setDetailHeavyReadySymbol] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
@@ -478,23 +477,16 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
       fromTilt: layoutItem?.tilt ?? -16,
       fromRoll: layoutItem?.roll ?? 0,
     });
-    setHiddenCardSymbol(card.symbol);
   };
 
   const closeDetailOverlay = () => {
     setDetailOverlay(null);
-    setHiddenCardSymbol(null);
     setDetailHeavyReadySymbol(null);
     setIsRouting(false);
     setActiveIndex(null);
     setHoveredIndex(null);
     activeSinceRef.current = performance.now();
   };
-
-  // 提前让真实卡片开始 fade in（overlay 还在时就调用）
-  const revealCard = useCallback(() => {
-    setHiddenCardSymbol(null);
-  }, []);
 
   const handleDetailWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     event.stopPropagation();
@@ -723,7 +715,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                 const isHovered = hoveredIndex === index && !isActive && activeIndex === null;
                 const motionDuration = activeIndex !== null || isActive ? ACTIVE_TRANSITION_MS : SCROLL_TRANSITION_MS;
                 const transform = `translate(-50%, -50%) translate3d(0, ${y}px, ${z}px) rotateX(${tilt}deg) rotateZ(${roll}deg) scaleX(${width / 560})`;
-                const isExpandedClone = hiddenCardSymbol === card.symbol;
+                const isExpandedClone = detailOverlay?.card.symbol === card.symbol;
                 const cardStyle: CSSProperties = {
                   left: "50%",
                   top: "50%",
@@ -892,7 +884,6 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
               fromRoll={detailOverlay.fromRoll}
               heavyReady={detailHeavyReady}
               onClose={closeDetailOverlay}
-              onRevealCard={revealCard}
               onWheel={handleDetailWheel}
               onTouchStart={handleDetailTouchStart}
               onTouchMove={handleDetailTouchMove}
@@ -913,7 +904,6 @@ function CompanyDetailOverlay({
   fromRoll,
   heavyReady,
   onClose,
-  onRevealCard,
   onWheel,
   onTouchStart,
   onTouchMove,
@@ -926,7 +916,6 @@ function CompanyDetailOverlay({
   fromRoll: number;
   heavyReady: boolean;
   onClose: () => void;
-  onRevealCard: () => void;
   onWheel: (event: ReactWheelEvent<HTMLDivElement>) => void;
   onTouchStart: (event: ReactTouchEvent<HTMLDivElement>) => void;
   onTouchMove: (event: ReactTouchEvent<HTMLDivElement>) => void;
@@ -936,11 +925,9 @@ function CompanyDetailOverlay({
   const latestIncome = detail.latestIncome;
   const incomeData = detail.incomeData ?? [];
 
-  const articleControls = useAnimationControls();
   const cardFaceControls = useAnimationControls();
   const panelControls = useAnimationControls();
   const contentControls = useAnimationControls();
-  const closingRef = useRef(false);
 
   // FLIP: 元素固定在最终位置，用 transform 偏移到初始位置，再动画归零
   const deltaX = fromRect.left + fromRect.width / 2 - (targetRect.left + targetRect.width / 2);
@@ -948,19 +935,17 @@ function CompanyDetailOverlay({
   const scaleX = fromRect.width / targetRect.width;
   const scaleY = fromRect.height / targetRect.height;
 
-  // 展开动画：命令式启动，无 state 变化
+  // 单 spring 直接展开：从卡片原位自然放大到最终位置
   useEffect(() => {
-    articleControls.start({
-      x: 0, y: 0, scaleX: 1, scaleY: 1,
-      rotateX: 0, rotateZ: 0, borderRadius: 12,
-      transition: SPRING_TRANSITION,
-    });
+    // 白板先淡入（盖住黑卡），用较长时间避免闪烁
     const panelTimer = setTimeout(() => {
       panelControls.start({ opacity: 1, transition: { duration: 0.38, ease: "easeOut" } });
     }, 100);
+    // 黑卡延迟淡出 — 等白板大部分可见后再消失，避免中间态露底
     const cardFaceTimer = setTimeout(() => {
       cardFaceControls.start({ opacity: 0, transition: { duration: 0.18 } });
     }, 300);
+    // 内容淡入 — 等面板完全可见
     const contentTimer = setTimeout(() => {
       contentControls.start({ opacity: 1, y: 0, transition: SPRING_TRANSITION });
     }, 320);
@@ -970,24 +955,6 @@ function CompanyDetailOverlay({
       clearTimeout(contentTimer);
     };
   }, []);
-
-  // 收纳动画：iOS 式 dismiss
-  // 核心：onRevealCard 让真实卡片开始 CSS transition fade in
-  // 同时 overlay 整体淡出，形成 cross-fade，零身份切换
-  const handleClose = useCallback(() => {
-    if (closingRef.current) return;
-    closingRef.current = true;
-    // 立即让真实卡片开始 fade in（通过 CSS transition）
-    onRevealCard();
-    // overlay 整体淡出 — 和真实卡片 fade in 形成 cross-fade
-    articleControls.start({
-      opacity: 0,
-      scale: 0.96,
-      transition: { duration: 0.28, ease: "easeOut" },
-    });
-    // 卸载（cross-fade 完成后）
-    setTimeout(() => { onClose(); }, 300);
-  }, [onClose, onRevealCard, articleControls]);
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[300]">
@@ -1011,8 +978,27 @@ function CompanyDetailOverlay({
           rotateZ: fromRoll,
           borderRadius: 7,
         }}
-        animate={articleControls}
-        exit={{ opacity: 0, transition: { duration: 0 } }}
+        animate={{
+          x: 0,
+          y: 0,
+          scaleX: 1,
+          scaleY: 1,
+          rotateX: 0,
+          rotateZ: 0,
+          borderRadius: 12,
+          transition: SPRING_TRANSITION,
+        }}
+        exit={{
+          x: deltaX,
+          y: deltaY,
+          scaleX,
+          scaleY,
+          rotateX: fromTilt,
+          rotateZ: fromRoll,
+          borderRadius: 7,
+          opacity: 0,
+          transition: SPRING_TRANSITION,
+        }}
       >
         {/* 卡片面 — 初始可见，展开后淡出 */}
         <motion.div
@@ -1078,7 +1064,7 @@ function CompanyDetailOverlay({
               <span>Stock Insight Archive</span>
               <button
                 type="button"
-                onClick={handleClose}
+                onClick={onClose}
                 className="rounded-[5px] bg-[#57584f] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-white shadow-[0_8px_16px_rgba(0,0,0,0.16)] transition hover:bg-[#34362f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f65370]"
               >
                 Back
