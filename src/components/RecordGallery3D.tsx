@@ -1,11 +1,12 @@
 "use client";
 
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useAnimationControls } from "motion/react";
 import {
   useEffect,
   useMemo,
   useRef,
   useState,
+  useCallback,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type TouchEvent as ReactTouchEvent,
@@ -250,6 +251,13 @@ const SPRING_TRANSITION = {
   stiffness: 120,
   damping: 18,
   mass: 1.1,
+};
+
+const SPRING_EXTRACT = {
+  type: "spring" as const,
+  stiffness: 380,
+  damping: 26,
+  mass: 0.8,
 };
 
 const toOverlayRect = (rect: DOMRect): OverlayRect => ({
@@ -922,6 +930,45 @@ function CompanyDetailOverlay({
   const latestIncome = detail.latestIncome;
   const incomeData = detail.incomeData ?? [];
 
+  const controls = useAnimationControls();
+  const cardFaceControls = useAnimationControls();
+  const panelControls = useAnimationControls();
+  const contentControls = useAnimationControls();
+
+  // 两阶段 spring 序列：抽离 → 展开
+  useEffect(() => {
+    const run = async () => {
+      // 阶段1: 抽离 — 卡片从栈里浮起，倾斜加深
+      await controls.start({
+        left: fromRect.left - 8,
+        top: fromRect.top - 36,
+        width: fromRect.width * 1.1,
+        height: fromRect.height * 1.1,
+        rotateX: fromTilt * 1.6,
+        rotateZ: fromRoll * 0.4,
+        borderRadius: 7,
+        boxShadow: "0 42px 84px rgba(0,0,0,0.55)",
+        transition: SPRING_EXTRACT,
+      });
+      // 阶段2: 展开 — 飞到屏幕中央
+      cardFaceControls.start({ opacity: 0, transition: { duration: 0.22 } });
+      panelControls.start({ opacity: 1, transition: { duration: 0.2 } });
+      await controls.start({
+        left: targetRect.left,
+        top: targetRect.top,
+        width: targetRect.width,
+        height: targetRect.height,
+        rotateX: 0,
+        rotateZ: 0,
+        borderRadius: 12,
+        boxShadow: "0 24px 70px rgba(36,39,30,0.24)",
+        transition: SPRING_TRANSITION,
+      });
+      contentControls.start({ opacity: 1, y: 0, transition: SPRING_TRANSITION });
+    };
+    run();
+  }, []);
+
   return (
     <div className="pointer-events-none fixed inset-0 z-[300]">
       <motion.article
@@ -937,16 +984,7 @@ function CompanyDetailOverlay({
           rotateZ: fromRoll,
           boxShadow: "0 18px 46px rgba(0,0,0,0.36)",
         }}
-        animate={{
-          left: targetRect.left,
-          top: targetRect.top,
-          width: targetRect.width,
-          height: targetRect.height,
-          borderRadius: 12,
-          rotateX: 0,
-          rotateZ: 0,
-          boxShadow: "0 24px 70px rgba(36,39,30,0.24)",
-        }}
+        animate={controls}
         exit={{
           left: fromRect.left,
           top: fromRect.top,
@@ -957,8 +995,8 @@ function CompanyDetailOverlay({
           rotateZ: fromRoll,
           boxShadow: "0 18px 46px rgba(0,0,0,0.36)",
           opacity: 0,
+          transition: SPRING_TRANSITION,
         }}
-        transition={SPRING_TRANSITION}
       >
         {/* 卡片面 — 初始可见，展开后淡出 */}
         <motion.div
@@ -971,9 +1009,8 @@ function CompanyDetailOverlay({
             boxShadow: "0 18px 46px rgba(0,0,0,0.36), 0 1px 0 rgba(255,255,255,0.14) inset",
           }}
           initial={{ opacity: 1 }}
-          animate={{ opacity: 0 }}
-          exit={{ opacity: 1 }}
-          transition={{ duration: 0.28, delay: 0.2 }}
+          animate={cardFaceControls}
+          exit={{ opacity: 1, transition: { duration: 0.15 } }}
         >
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0)_42%,rgba(0,0,0,0.2))]" />
           <div className="absolute right-3 top-2 rounded-[4px] px-2 py-0.5 font-mono text-[10px] font-bold text-[#101211]" style={{ backgroundColor: card.tint }}>
@@ -1001,9 +1038,8 @@ function CompanyDetailOverlay({
             boxShadow: "0 24px 70px rgba(36,39,30,0.24), 0 1px 0 rgba(255,255,255,0.7) inset",
           }}
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.22, delay: 0.18 }}
+          animate={panelControls}
+          exit={{ opacity: 0, transition: { duration: 0.12 } }}
         >
           <div className="absolute inset-x-0 top-0 h-40 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0))]" />
           <div className="absolute inset-y-0 left-0 w-10 bg-[linear-gradient(90deg,rgba(152,163,111,0.16),rgba(152,163,111,0))]" />
@@ -1015,9 +1051,8 @@ function CompanyDetailOverlay({
           data-detail-scroll
           className="relative z-20 h-full touch-pan-y overflow-y-auto overscroll-contain"
           initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 8 }}
-          transition={{ duration: 0.3, delay: 0.32 }}
+          animate={contentControls}
+          exit={{ opacity: 0, y: 8, transition: { duration: 0.12 } }}
           onWheel={onWheel}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
