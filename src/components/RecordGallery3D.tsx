@@ -961,34 +961,36 @@ function CompanyDetailOverlay({
   }, []);
 
   // 收纳动画：纯命令式，零 re-render
-  // 关键：最后不是硬切卸载，而是 opacity handoff 让真实卡片接管
+  // 核心：opacity handoff 必须在运动过程中完成，不能等停下来
   const handleClose = useCallback(() => {
     if (closingRef.current) return;
     closingRef.current = true;
-    // 内容消失
-    contentControls.start({ opacity: 0, y: 8, transition: { duration: 0.12 } });
+    // 内容立即消失
+    contentControls.start({ opacity: 0, y: 8, transition: { duration: 0.1 } });
     // 白板淡出，黑卡面淡入
-    panelControls.start({ opacity: 0, transition: { duration: 0.25, ease: "easeIn" } });
+    panelControls.start({ opacity: 0, transition: { duration: 0.2, ease: "easeIn" } });
     setTimeout(() => {
-      cardFaceControls.start({ opacity: 1, transition: { duration: 0.18 } });
-    }, 80);
-    // 缩回原位
+      cardFaceControls.start({ opacity: 1, transition: { duration: 0.15 } });
+    }, 60);
+    // 缩回原位 — 用快速收敛 spring，减少尾部晃动
+    const SPRING_CLOSE = { type: "spring" as const, stiffness: 260, damping: 28, mass: 0.9 };
     setTimeout(() => {
       articleControls.start({
         x: deltaX, y: deltaY, scaleX, scaleY,
         rotateX: fromTilt, rotateZ: fromRoll, borderRadius: 7,
-        transition: SPRING_TRANSITION,
+        transition: SPRING_CLOSE,
       });
-    }, 180);
-    // opacity handoff：缩回到位后淡出 overlay，让真实卡片接管
+    }, 120);
+    // opacity handoff：在缩回运动中（卡片还在动时）开始淡出
+    // 人眼追踪运动时对渲染差异不敏感，趁这时完成身份切换
     setTimeout(() => {
       articleControls.start({
         opacity: 0,
-        transition: { duration: 0.12, ease: "easeOut" },
+        transition: { duration: 0.18, ease: "easeOut" },
       });
-    }, 480);
-    // 卸载（handoff 完成后）
-    setTimeout(() => { onClose(); }, 620);
+    }, 280);
+    // 卸载
+    setTimeout(() => { onClose(); }, 480);
   }, [onClose, deltaX, deltaY, scaleX, scaleY, fromTilt, fromRoll,
       articleControls, contentControls, panelControls, cardFaceControls]);
 
