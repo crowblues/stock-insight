@@ -541,34 +541,51 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     detailTimelineRef.current = timeline;
     gsap.set(article, {
       backgroundColor: "transparent",
-      boxShadow: "none",
+      boxShadow: "0 24px 70px rgba(36,39,30,0.24)",
       transformOrigin: "50% 50%",
       willChange: "transform",
       force3D: true,
     });
 
     timeline
-      .to(content, { autoAlpha: 0, y: 8, duration: 0.14, ease: "power2.out" }, 0)
-      .to(panel, { autoAlpha: 0, duration: 0.18, ease: "power2.out" }, 0.02)
-      .to(cardFace, { autoAlpha: 1, duration: 0.22, ease: "power2.out" }, 0.04)
-      .to(
-        article,
-        {
-          x: closeTransform.x,
-          y: closeTransform.y,
-          scaleX: closeTransform.scaleX,
-          scaleY: closeTransform.scaleY,
-          rotateX: current.fromTilt,
-          rotateZ: current.fromRoll,
-          borderRadius: 7,
-          transformPerspective: 560,
-          duration: DETAIL_CLOSE_DURATION,
-          ease: "power3.out",
-          force3D: true,
-        },
-        0.02,
-      )
-      // 末尾交叉淡出：overlay 渐隐，卡片已在下方显现，消除硬切换
+      // === 反向三阶段"收纳"动画 ===
+
+      // 阶段1: 内容撤退 — 详情内容消失，露出卡片面(0-0.16s)
+      .to(content, { autoAlpha: 0, y: 8, duration: 0.12, ease: "power2.in" }, 0)
+      .to(panel, { autoAlpha: 0, duration: 0.14, ease: "power2.in" }, 0.02)
+      .to(cardFace, { autoAlpha: 1, duration: 0.18, ease: "power2.out" }, 0.06)
+
+      // 阶段2: 压缩 — 缩小成浮动卡片，悬停在栈上方(0.14-0.42s)
+      .to(article, {
+        x: closeTransform.x * 0.82,
+        y: closeTransform.y + 18,
+        scaleX: closeTransform.scaleX * 1.06,
+        scaleY: closeTransform.scaleY * 1.06,
+        rotateX: current.fromTilt * 0.35,
+        rotateZ: current.fromRoll * 0.3,
+        borderRadius: 7,
+        boxShadow: "0 36px 72px rgba(0,0,0,0.5)",
+        transformPerspective: 560,
+        duration: 0.28,
+        ease: "power2.inOut",
+        force3D: true,
+      }, 0.14)
+
+      // 阶段3: 插入 — 滑回卡堆位置(0.40-0.58s)
+      .to(article, {
+        x: closeTransform.x,
+        y: closeTransform.y,
+        scaleX: closeTransform.scaleX,
+        scaleY: closeTransform.scaleY,
+        rotateX: current.fromTilt,
+        rotateZ: current.fromRoll,
+        boxShadow: "0 18px 46px rgba(0,0,0,0.36)",
+        duration: 0.18,
+        ease: "power2.in",
+        force3D: true,
+      }, 0.40)
+
+      // 末尾交叉淡出：overlay 渐隐，卡片已在下方显现
       .to(article, { autoAlpha: 0, duration: 0.1, ease: "power2.in" }, ">-0.1");
   };
 
@@ -650,12 +667,12 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
       rotateX: detailOverlay.fromTilt,
       rotateZ: detailOverlay.fromRoll,
       transformPerspective: 560,
-      boxShadow: "none",
+      boxShadow: "0 18px 46px rgba(0,0,0,0.36)",
       transformOrigin: "50% 50%",
       willChange: "transform",
       force3D: true,
     });
-    gsap.set(content, { autoAlpha: 0, y: 12 });
+    gsap.set(content, { autoAlpha: 0, y: 16 });
     gsap.set(panel, { autoAlpha: 0 });
     gsap.set(cardFace, { autoAlpha: 1 });
 
@@ -668,27 +685,43 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     });
     detailTimelineRef.current = timeline;
 
-    timeline
-      .to(
-        article,
-        {
-          x: 0,
-          y: 0,
-          scaleX: 1,
-          scaleY: 1,
-          rotateX: 0,
-          rotateZ: 0,
-          borderRadius: 12,
-          transformPerspective: 560,
-          duration: DETAIL_OPEN_DURATION,
-          ease: "power2.inOut",
-          force3D: true,
-        },
-        0,
-      )
-      .to(panel, { autoAlpha: 1, duration: 0.28, ease: "power2.out" }, 0.22)
-      .to(cardFace, { autoAlpha: 0, duration: 0.26, ease: "power2.out" }, 0.2)
-      .to(content, { autoAlpha: 1, y: 0, duration: 0.32, ease: "power3.out" }, 0.32);
+    // === 三阶段"抽卡"动画 ===
+
+    // 阶段1: 抽离 — 卡片从栈里"浮起来"(0-0.22s)
+    timeline.to(article, {
+      x: fromTransform.x * 0.82,
+      y: fromTransform.y - 18,
+      scaleX: fromTransform.scaleX * 1.06,
+      scaleY: fromTransform.scaleY * 1.06,
+      rotateX: detailOverlay.fromTilt * 0.35,
+      rotateZ: detailOverlay.fromRoll * 0.3,
+      boxShadow: "0 36px 72px rgba(0,0,0,0.5)",
+      duration: 0.22,
+      ease: "power2.out",
+      force3D: true,
+    }, 0);
+
+    // 阶段2: 飞行展开 — 浮动实体展开到目标位置(0.22-0.64s)
+    timeline.to(article, {
+      x: 0,
+      y: 0,
+      scaleX: 1,
+      scaleY: 1,
+      rotateX: 0,
+      rotateZ: 0,
+      borderRadius: 12,
+      transformPerspective: 560,
+      boxShadow: "0 24px 70px rgba(36,39,30,0.24)",
+      duration: 0.42,
+      ease: "power2.inOut",
+      force3D: true,
+    }, 0.22);
+
+    // 阶段3: 着陆 — 空间到位后，内容"长出来"(0.5-0.8s)
+    // 关键：cardFace 在空间移动完成后才消失，不是边飞边消
+    timeline.to(cardFace, { autoAlpha: 0, duration: 0.16, ease: "power2.out" }, 0.52);
+    timeline.to(panel, { autoAlpha: 1, duration: 0.2, ease: "power2.out" }, 0.50);
+    timeline.to(content, { autoAlpha: 1, y: 0, duration: 0.28, ease: "power3.out" }, 0.58);
 
     return () => {
       timeline.kill();
