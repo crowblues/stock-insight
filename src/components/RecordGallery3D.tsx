@@ -688,15 +688,14 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
 
   const closeDetailOverlay = () => {
     if (!detailOverlay || overlayClosing) return;
-    // 先重置 routing/active，让卡片回到正常堆叠位置
-    setIsRouting(false);
-    setActiveIndex(null);
-    setHoveredIndex(null);
-    setDetailHeavyReadySymbol(null);
     setOverlayClosing(true);
+    setDetailHeavyReadySymbol(null);
   };
 
   const handleCloseComplete = useCallback(() => {
+    setIsRouting(false);
+    setActiveIndex(null);
+    setHoveredIndex(null);
     setDetailOverlay(null);
     setOverlayClosing(false);
     activeSinceRef.current = performance.now();
@@ -1106,7 +1105,7 @@ function CompanyDetailOverlay({
       });
     }
 
-    // Phase 2: 收回卡片位置（实时测量卡片 DOM 位置）
+    // Phase 2: 收回卡片位置（用原始 fromRect）
     const PHASE2_DELAY = 140;
     setTimeout(() => {
       el.style.overflow = "hidden";
@@ -1114,14 +1113,10 @@ function CompanyDetailOverlay({
       el.style.width = `${targetRect.width}px`;
       el.style.contain = "layout paint style";
 
-      // 实时测量卡片在堆叠中的当前位置（已回到正常状态）
-      const cardEl = document.querySelector(`[data-card-symbol="${card.symbol}"]`);
-      const actualTarget = cardEl ? toOverlayRect(cardEl.getBoundingClientRect()) : fromRect;
-
       const curCx = targetRect.left + targetRect.width / 2;
       const curCy = targetRect.top + headerHeight / 2;
-      const toCx = actualTarget.left + actualTarget.width / 2;
-      const toCy = actualTarget.top + actualTarget.height / 2;
+      const toCx = fromRect.left + fromRect.width / 2;
+      const toCy = fromRect.top + fromRect.height / 2;
       const dx = toCx - curCx;
       const dy = toCy - curCy;
 
@@ -1138,8 +1133,8 @@ function CompanyDetailOverlay({
           `translate(0px, 0px)`,
           `translate(${dx}px, ${dy}px)`,
         ],
-        width: [`${targetRect.width}px`, `${actualTarget.width}px`],
-        height: [`${headerHeight}px`, `${actualTarget.height}px`],
+        width: [`${targetRect.width}px`, `${fromRect.width}px`],
+        height: [`${headerHeight}px`, `${fromRect.height}px`],
         borderRadius: ["12px", "7px"],
         duration: dur,
         ease: spring,
