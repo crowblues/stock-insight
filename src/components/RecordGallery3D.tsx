@@ -1,7 +1,22 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import gsap from "gsap";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+  type RefObject,
+  type TouchEvent as ReactTouchEvent,
+  type WheelEvent as ReactWheelEvent,
+} from "react";
+import EPSChart from "@/components/charts/EPSChart";
+import MarginChart from "@/components/charts/MarginChart";
+import RevenueChart from "@/components/charts/RevenueChart";
+import { formatCurrency, formatMultiple, formatPercent } from "@/lib/format";
 
 type RecordCard = {
   symbol: string;
@@ -12,6 +27,39 @@ type RecordCard = {
   image: string;
   tint: string;
   change: string;
+};
+
+type CompanyDetailPayload = {
+  profile: {
+    symbol: string;
+    companyName: string;
+    image: string;
+    industry: string;
+    sector: string;
+    exchange: string;
+    marketCap: number;
+    price: number;
+    change: number;
+    description: string;
+  } | null;
+  latestMetrics: {
+    returnOnEquity: number;
+    returnOnAssets: number;
+    evToEBITDA: number;
+  } | null;
+  latestIncome: {
+    fiscalYear?: string;
+    revenue: number;
+    netIncome: number;
+  } | null;
+  incomeData: {
+    fiscalYear: string;
+    revenue: number;
+    grossProfit: number;
+    netIncome: number;
+    epsDiluted: number;
+  }[];
+  peRatio: number | null;
 };
 
 const CARDS: RecordCard[] = [
@@ -152,29 +200,182 @@ const MAX_TOUCH_STEP = 0.62;
 const EDGE_FADE_WIDTH = 0.86;
 const MIN_CLICKABLE_OPACITY = 0.98;
 const CLICK_AFTER_SCROLL_DELAY_MS = 140;
-const CONFIRM_CLICK_DELAY_MS = 260;
-const SWITCH_REOPEN_DELAY_MS = 92;
+const CONFIRM_CLICK_DELAY_MS = 110;
+const SWITCH_REOPEN_DELAY_MS = 50;
 const FRONT_ACTIVE_START = VISIBLE_COUNT - 1.45;
+const ACTIVE_TRANSITION_MS = 220;
+const DETAIL_OPEN_CARD_DELAY_MS = 0;
+const DETAIL_PANEL_MAX_WIDTH = 680;
+const DETAIL_PANEL_MAX_HEIGHT = 500;
+const DETAIL_PANEL_WIDTH_RATIO = 0.76;
+const DETAIL_PANEL_HEIGHT_RATIO = 0.66;
+const DETAIL_OPEN_DURATION = 0.34;
+const DETAIL_CLOSE_DURATION = 0.36;
+const DETAIL_HEAVY_CONTENT_DELAY_MS = 180;
 
 type RecordGallery3DProps = {
   onBackToStart?: () => void;
 };
 
+type OverlayRect = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+type CardLayoutItem = {
+  card: RecordCard;
+  index: number;
+  slot: number;
+  motionSlot: number;
+  opacity: number;
+  isClickableSlot: boolean;
+  y: number;
+  z: number;
+  width: number;
+  height: number;
+  tilt: number;
+  roll: number;
+};
+
+type DetailOverlayState = {
+  card: RecordCard;
+  fromRect: OverlayRect;
+  targetRect: OverlayRect;
+  fromTilt: number;
+  fromRoll: number;
+  phase: "opening" | "open" | "closing";
+};
+
+const toOverlayRect = (rect: DOMRect): OverlayRect => ({
+  left: rect.left,
+  top: rect.top,
+  width: rect.width,
+  height: rect.height,
+});
+
+const getDetailTargetRect = (): OverlayRect => {
+  const width = Math.min(DETAIL_PANEL_MAX_WIDTH, window.innerWidth * DETAIL_PANEL_WIDTH_RATIO);
+  const height = Math.min(DETAIL_PANEL_MAX_HEIGHT, window.innerHeight * DETAIL_PANEL_HEIGHT_RATIO);
+
+  return {
+    left: (window.innerWidth - width) / 2,
+    top: (window.innerHeight - height) / 2,
+    width,
+    height,
+  };
+};
+
+const buildFallbackIncomeData = (card: RecordCard): CompanyDetailPayload["incomeData"] => {
+  const seed = Array.from(card.symbol).reduce((total, char) => total + char.charCodeAt(0), 0);
+  const latestRevenue = (42 + (seed % 96)) * 1_000_000_000;
+  const growth = 0.055 + (seed % 5) * 0.012;
+  const grossMargin = 0.42 + (seed % 16) / 100;
+  const netMargin = 0.16 + (seed % 12) / 100;
+  const shares = 3_200_000_000 + (seed % 9) * 620_000_000;
+
+  return Array.from({ length: 5 }, (_, index) => {
+    const revenue = Math.round(latestRevenue / Math.pow(1 + growth, index));
+    const netIncome = Math.round(revenue * (netMargin - index * 0.006));
+    return {
+      fiscalYear: `${2025 - index}`,
+      revenue,
+      grossProfit: Math.round(revenue * (grossMargin - index * 0.004)),
+      netIncome,
+      epsDiluted: Number((netIncome / shares).toFixed(2)),
+    };
+  });
+};
+
+const fallbackDetail = (card: RecordCard): CompanyDetailPayload => ({
+  profile: {
+    symbol: card.symbol,
+    companyName: card.sub,
+    image: card.image,
+    industry: card.tags[0] ?? "Analysis",
+    sector: "Company Research",
+    exchange: "Stock Insight",
+    marketCap: 0,
+    price: 0,
+    change: Number.parseFloat(card.change.replace("%", "")),
+    description: card.desc,
+  },
+  latestMetrics: null,
+  latestIncome: (() => {
+    const latest = buildFallbackIncomeData(card)[0];
+    return {
+      fiscalYear: latest.fiscalYear,
+      revenue: latest.revenue,
+      netIncome: latest.netIncome,
+    };
+  })(),
+  incomeData: buildFallbackIncomeData(card),
+  peRatio: null,
+});
+
+const normalizeCompanyDetail = (card: RecordCard, detail: CompanyDetailPayload): CompanyDetailPayload => {
+  const fallback = fallbackDetail(card);
+  const incomeData = detail.incomeData?.length ? detail.incomeData : fallback.incomeData;
+  const latestIncome = detail.latestIncome ?? {
+    fiscalYear: incomeData[0]?.fiscalYear,
+    revenue: incomeData[0]?.revenue ?? 0,
+    netIncome: incomeData[0]?.netIncome ?? 0,
+  };
+
+  return {
+    ...fallback,
+    ...detail,
+    profile: detail.profile ?? fallback.profile,
+    latestMetrics: detail.latestMetrics ?? fallback.latestMetrics,
+    latestIncome,
+    incomeData,
+    peRatio: detail.peRatio ?? fallback.peRatio,
+  };
+};
+
+const loadCompanyDetail = async (symbol: string): Promise<CompanyDetailPayload | null> => {
+  try {
+    const response = await fetch(`/api/company/${encodeURIComponent(symbol)}`);
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+};
+
 export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps) {
-  const router = useRouter();
   const [scrollPosition, setScrollPosition] = useState(0);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [isRouting, setIsRouting] = useState(false);
+  const [detailOverlay, setDetailOverlay] = useState<DetailOverlayState | null>(null);
+  const [detailCache, setDetailCache] = useState<Record<string, CompanyDetailPayload>>({});
+  const [detailHeavyReadySymbol, setDetailHeavyReadySymbol] = useState<string | null>(null);
+  const [isClosingHandoff, setIsClosingHandoff] = useState(false);
+  const [closingSymbol, setClosingSymbol] = useState<string | null>(null);
+  const [restoringSymbol, setRestoringSymbol] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
+  const cardRefs = useRef(new Map<string, HTMLElement>());
+  const detailArticleRef = useRef<HTMLElement | null>(null);
+  const detailContentRef = useRef<HTMLDivElement | null>(null);
+  const detailPanelRef = useRef<HTMLDivElement | null>(null);
+  const detailCardFaceRef = useRef<HTMLDivElement | null>(null);
+  const detailCacheRef = useRef(new Map<string, CompanyDetailPayload>());
+  const detailOverlayRef = useRef<DetailOverlayState | null>(null);
+  const detailTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const detailClosingRef = useRef(false);
   const scrollPositionRef = useRef(0);
+  const scrollFrameRef = useRef<number | null>(null);
+  const pendingScrollPositionRef = useRef(0);
   const touchYRef = useRef<number | null>(null);
   const activeSinceRef = useRef(0);
   const lastScrollAtRef = useRef(0);
   const pendingActiveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const routeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const detailTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const layout = useMemo(
-    () => {
+    (): CardLayoutItem[] => {
       const basePosition = Math.floor(scrollPosition);
       const fractionalOffset = scrollPosition - basePosition;
       const displayCards = Array.from({ length: VISIBLE_COUNT + 2 }, (_, position) => {
@@ -194,19 +395,19 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
         const activeGap = beforeActive
           ? frontActiveMotion
             ? isRouting
-              ? -46
-              : -30
-            : isRouting
               ? -54
               : -34
+            : isRouting
+              ? -56
+              : -36
           : afterActive
             ? isRouting
-              ? 62
-              : 38
+              ? 56
+              : 40
             : 0;
-        const activeLift = isActive ? (isRouting ? (isFrontActive ? -6 : 28) : isFrontActive ? -16 : 0) : 0;
-        const activeZBoost = isActive ? (isRouting ? (isFrontActive ? 86 : 168) : isFrontActive ? 18 : 68) : 0;
-        const activeWidthBoost = isActive ? (isRouting ? (isFrontActive ? 68 : 96) : isFrontActive ? 10 : 22) : 0;
+        const activeLift = isActive ? (isRouting ? (isFrontActive ? -30 : 20) : isFrontActive ? -22 : -3) : 0;
+        const activeZBoost = isActive ? (isRouting ? (isFrontActive ? 92 : 150) : isFrontActive ? 34 : 68) : 0;
+        const activeWidthBoost = isActive ? (isRouting ? (isFrontActive ? 62 : 82) : isFrontActive ? 18 : 24) : 0;
         const topFade = motionSlot < 0 ? Math.max(0, 1 + motionSlot / EDGE_FADE_WIDTH) : 1;
         const bottomFade = motionSlot > VISIBLE_COUNT - 1 ? Math.max(0, (VISIBLE_COUNT - motionSlot) / EDGE_FADE_WIDTH) : 1;
         const opacity = Math.min(topFade, bottomFade);
@@ -222,65 +423,319 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
           y: BASE_Y + motionSlot * ROW_STEP + activeGap + activeLift,
           z: -215 + motionSlot * 22 + activeZBoost,
           width: BASE_WIDTH + motionSlot * WIDTH_STEP + activeWidthBoost,
-          height: isActive ? (isRouting ? (isFrontActive ? 118 : 132) : isFrontActive ? 88 : 92) : Math.min(70 + motionSlot * 1.6, 84),
-          tilt: isActive ? (isFrontActive ? -24 : -28) : -26,
-          roll: isActive ? (isFrontActive ? -0.45 : -1.3) : 0,
+          height: isActive ? (isRouting ? (isFrontActive ? 128 : 132) : isFrontActive ? 104 : 96) : Math.min(70 + motionSlot * 1.6, 84),
+          tilt: isActive ? (isFrontActive ? -16 : -26) : -26,
+          roll: isActive ? (isFrontActive ? -0.18 : -1.1) : 0,
         };
       });
     },
     [activeIndex, isRouting, scrollPosition],
   );
 
-  const handleCardClick = (index: number, symbol: string, eventTime: number) => {
-    const now = eventTime;
+  const handleCardClick = (index: number, event: ReactMouseEvent<HTMLButtonElement>) => {
+    const now = event.timeStamp;
     if (now - lastScrollAtRef.current < CLICK_AFTER_SCROLL_DELAY_MS) return;
-    if (routeTimerRef.current) return;
+    if (detailTimerRef.current || detailOverlay) return;
 
     if (activeIndex !== index) {
+      const card = CARDS[index];
       setIsRouting(false);
-      if (pendingActiveTimerRef.current) clearTimeout(pendingActiveTimerRef.current);
+      if (pendingActiveTimerRef.current) {
+        clearTimeout(pendingActiveTimerRef.current);
+        pendingActiveTimerRef.current = null;
+      }
 
       if (activeIndex !== null) {
         activeSinceRef.current = 0;
         setActiveIndex(null);
         pendingActiveTimerRef.current = setTimeout(() => {
           activeSinceRef.current = performance.now();
+          pendingActiveTimerRef.current = null;
           setActiveIndex(index);
+          warmCompanyDetail(card);
         }, SWITCH_REOPEN_DELAY_MS);
         return;
       }
 
       activeSinceRef.current = now;
       setActiveIndex(index);
+      warmCompanyDetail(card);
       return;
     }
 
     if (now - activeSinceRef.current < CONFIRM_CLICK_DELAY_MS) return;
 
-    setActiveIndex(index);
+    const card = CARDS[index];
+    const cardElement = cardRefs.current.get(card.symbol);
+    if (!cardElement) return;
+
     setIsRouting(true);
-    routeTimerRef.current = setTimeout(() => {
-      router.push(`/company/${symbol}`);
-    }, 720);
+    warmCompanyDetail(card);
+    detailTimerRef.current = setTimeout(() => {
+      const layoutItem = layout.find((item) => item.index === index);
+      detailTimerRef.current = null;
+      setDetailOverlay({
+        card,
+        fromRect: toOverlayRect(cardElement.getBoundingClientRect()),
+        targetRect: getDetailTargetRect(),
+        fromTilt: layoutItem?.tilt ?? -16,
+        fromRoll: layoutItem?.roll ?? 0,
+        phase: "opening",
+      });
+    }, DETAIL_OPEN_CARD_DELAY_MS);
+  };
+
+  const closeDetailOverlay = () => {
+    const current = detailOverlayRef.current;
+    const article = detailArticleRef.current;
+    const cardFace = detailCardFaceRef.current;
+    const content = detailContentRef.current;
+    const panel = detailPanelRef.current;
+
+    if (!current || !article || !content || !cardFace || !panel || detailClosingRef.current) return;
+
+    detailClosingRef.current = true;
+    detailTimelineRef.current?.kill();
+    const articleRect = toOverlayRect(article.getBoundingClientRect());
+
+    setDetailOverlay({ ...current, phase: "closing" });
+    setIsClosingHandoff(true);
+    setClosingSymbol(current.card.symbol);
+    setIsRouting(false);
+    setActiveIndex(null);
+    setHoveredIndex(null);
+
+    const stackCard = cardRefs.current.get(current.card.symbol);
+    const targetRect = stackCard ? toOverlayRect(stackCard.getBoundingClientRect()) : current.fromRect;
+    const closeTransform = {
+      x: targetRect.left + targetRect.width / 2 - (articleRect.left + articleRect.width / 2),
+      y: targetRect.top + targetRect.height / 2 - (articleRect.top + articleRect.height / 2),
+      scaleX: targetRect.width / articleRect.width,
+      scaleY: targetRect.height / articleRect.height,
+    };
+
+    const finishClose = () => {
+      detailArticleRef.current = null;
+      detailContentRef.current = null;
+      detailPanelRef.current = null;
+      detailCardFaceRef.current = null;
+      detailTimelineRef.current = null;
+      detailClosingRef.current = false;
+      setIsClosingHandoff(false);
+      setClosingSymbol(null);
+      setRestoringSymbol(current.card.symbol);
+      setDetailHeavyReadySymbol(null);
+      setDetailOverlay(null);
+      activeSinceRef.current = performance.now();
+    };
+
+    const timeline = gsap.timeline({
+      defaults: { overwrite: true },
+      onComplete: finishClose,
+      onInterrupt: () => {
+        detailClosingRef.current = false;
+      },
+    });
+    detailTimelineRef.current = timeline;
+    gsap.set(article, {
+      backgroundColor: "transparent",
+      boxShadow: "none",
+      transformOrigin: "50% 50%",
+      willChange: "transform",
+      force3D: true,
+    });
+
+    timeline
+      .to(content, { autoAlpha: 0, y: 8, duration: 0.11, ease: "power2.out" }, 0)
+      .to(panel, { autoAlpha: 0, duration: 0.16, ease: "power2.out" }, 0.03)
+      .to(cardFace, { autoAlpha: 1, duration: 0.14, ease: "power2.out" }, 0.02)
+      .to(
+        article,
+        {
+          x: closeTransform.x,
+          y: closeTransform.y,
+          scaleX: closeTransform.scaleX,
+          scaleY: closeTransform.scaleY,
+          rotateX: current.fromTilt,
+          rotateZ: current.fromRoll,
+          transformPerspective: 560,
+          duration: DETAIL_CLOSE_DURATION,
+          ease: "expo.out",
+          force3D: true,
+        },
+        0.02,
+      );
+  };
+
+  const handleDetailWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+  };
+
+  const handleDetailTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+  };
+
+  const handleDetailTouchMove = (event: ReactTouchEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+  };
+
+  useEffect(() => {
+    detailOverlayRef.current = detailOverlay;
+  }, [detailOverlay]);
+
+  useEffect(() => {
+    if (!restoringSymbol) return;
+
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        setRestoringSymbol(null);
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [restoringSymbol]);
+
+  useEffect(() => {
+    if (detailOverlay?.phase !== "open") return;
+
+    const timer = window.setTimeout(() => {
+      setDetailHeavyReadySymbol(detailOverlay.card.symbol);
+    }, DETAIL_HEAVY_CONTENT_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [detailOverlay?.phase, detailOverlay?.card.symbol]);
+
+  const detailHeavyReady = detailOverlay?.phase !== "opening" && detailHeavyReadySymbol === detailOverlay?.card.symbol;
+
+  useLayoutEffect(() => {
+    if (!detailOverlay || detailOverlay.phase !== "opening") return;
+
+    const article = detailArticleRef.current;
+    const content = detailContentRef.current;
+    const cardFace = detailCardFaceRef.current;
+    const panel = detailPanelRef.current;
+    if (!article || !content || !cardFace || !panel) return;
+
+    detailTimelineRef.current?.kill();
+
+    const fromTransform = {
+      x: detailOverlay.fromRect.left + detailOverlay.fromRect.width / 2 - (detailOverlay.targetRect.left + detailOverlay.targetRect.width / 2),
+      y: detailOverlay.fromRect.top + detailOverlay.fromRect.height / 2 - (detailOverlay.targetRect.top + detailOverlay.targetRect.height / 2),
+      scaleX: detailOverlay.fromRect.width / detailOverlay.targetRect.width,
+      scaleY: detailOverlay.fromRect.height / detailOverlay.targetRect.height,
+    };
+
+    gsap.set(article, {
+      left: detailOverlay.targetRect.left,
+      top: detailOverlay.targetRect.top,
+      width: detailOverlay.targetRect.width,
+      height: detailOverlay.targetRect.height,
+      x: fromTransform.x,
+      y: fromTransform.y,
+      scaleX: fromTransform.scaleX,
+      scaleY: fromTransform.scaleY,
+      borderRadius: 7,
+      backgroundColor: "transparent",
+      rotateX: detailOverlay.fromTilt,
+      rotateZ: detailOverlay.fromRoll,
+      transformPerspective: 560,
+      boxShadow: "none",
+      transformOrigin: "50% 50%",
+      willChange: "transform",
+      force3D: true,
+    });
+    gsap.set(content, { autoAlpha: 0, y: 12 });
+    gsap.set(panel, { autoAlpha: 0 });
+    gsap.set(cardFace, { autoAlpha: 1 });
+
+    const timeline = gsap.timeline({
+      defaults: { overwrite: true },
+      onComplete: () => {
+        detailTimelineRef.current = null;
+        setDetailOverlay((current) => (current ? { ...current, phase: "open" } : current));
+      },
+    });
+    detailTimelineRef.current = timeline;
+
+    timeline
+      .to(
+        article,
+        {
+          x: 0,
+          y: 0,
+          scaleX: 1,
+          scaleY: 1,
+          rotateX: 0,
+          rotateZ: 0,
+          transformPerspective: 560,
+          duration: DETAIL_OPEN_DURATION,
+          ease: "expo.out",
+          force3D: true,
+        },
+        0,
+      )
+      .to(panel, { autoAlpha: 1, duration: 0.2, ease: "power2.out" }, 0.1)
+      .to(cardFace, { autoAlpha: 0, duration: 0.2, ease: "power2.out" }, 0.12)
+      .to(content, { autoAlpha: 1, y: 0, duration: 0.24, ease: "power3.out" }, 0.18);
+
+    return () => {
+      timeline.kill();
+    };
+  }, [detailOverlay]);
+
+  const warmCompanyDetail = (card: RecordCard) => {
+    if (!detailCacheRef.current.has(card.symbol)) {
+      const fallback = fallbackDetail(card);
+      detailCacheRef.current.set(card.symbol, fallback);
+      setDetailCache((current) => ({ ...current, [card.symbol]: fallback }));
+    }
+
+    void loadCompanyDetail(card.symbol).then((detail) => {
+      if (!detail) return;
+      const normalizedDetail = normalizeCompanyDetail(card, detail);
+      detailCacheRef.current.set(card.symbol, normalizedDetail);
+      setDetailCache((current) => ({ ...current, [card.symbol]: normalizedDetail }));
+    });
   };
 
   useEffect(() => {
     const section = sectionRef.current;
     if (!section) return;
 
+    const commitScrollPosition = () => {
+      scrollFrameRef.current = null;
+      setScrollPosition(pendingScrollPositionRef.current);
+    };
+
     const moveCardsBy = (stepDelta: number) => {
       const nextPosition = (scrollPositionRef.current + stepDelta + CARDS.length) % CARDS.length;
       scrollPositionRef.current = nextPosition;
+      pendingScrollPositionRef.current = nextPosition;
       activeSinceRef.current = 0;
       lastScrollAtRef.current = performance.now();
-      if (pendingActiveTimerRef.current) clearTimeout(pendingActiveTimerRef.current);
+      if (pendingActiveTimerRef.current) {
+        clearTimeout(pendingActiveTimerRef.current);
+        pendingActiveTimerRef.current = null;
+      }
+      if (detailOverlayRef.current) return;
+      setHoveredIndex(null);
       setActiveIndex(null);
       setIsRouting(false);
-      setScrollPosition(nextPosition);
+      if (scrollFrameRef.current === null) {
+        scrollFrameRef.current = window.requestAnimationFrame(commitScrollPosition);
+      }
     };
 
     const handleWheel = (event: WheelEvent) => {
       if (!section.contains(event.target as Node)) return;
+
+      if ((event.target as Element | null)?.closest("[data-detail-scroll]")) return;
 
       if (event.cancelable) event.preventDefault();
       event.stopPropagation();
@@ -294,10 +749,13 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     };
 
     const handleTouchStart = (event: TouchEvent) => {
+      if ((event.target as Element | null)?.closest("[data-detail-scroll]")) return;
       touchYRef.current = event.touches[0]?.clientY ?? null;
     };
 
     const handleTouchMove = (event: TouchEvent) => {
+      if ((event.target as Element | null)?.closest("[data-detail-scroll]")) return;
+
       if (event.cancelable) event.preventDefault();
       event.stopPropagation();
 
@@ -327,6 +785,10 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     section.addEventListener("touchcancel", handleTouchEnd);
 
     return () => {
+      if (scrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(scrollFrameRef.current);
+        scrollFrameRef.current = null;
+      }
       window.removeEventListener("wheel", handleWheel, wheelOptions);
       section.removeEventListener("touchstart", handleTouchStart);
       section.removeEventListener("touchmove", handleTouchMove, touchMoveOptions);
@@ -361,7 +823,9 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   useEffect(() => {
     return () => {
       if (pendingActiveTimerRef.current) clearTimeout(pendingActiveTimerRef.current);
-      if (routeTimerRef.current) clearTimeout(routeTimerRef.current);
+      if (detailTimerRef.current) clearTimeout(detailTimerRef.current);
+      if (scrollFrameRef.current !== null) window.cancelAnimationFrame(scrollFrameRef.current);
+      detailTimelineRef.current?.kill();
     };
   }, []);
 
@@ -371,16 +835,18 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     const isActive = item.index === activeIndex;
     const hitSlot = Math.max(0, Math.min(VISIBLE_COUNT - 1, Math.round(item.motionSlot)));
     const isFrontCard = hitSlot === VISIBLE_COUNT - 1;
-    const yOffset = isActive ? 28 : isFrontCard ? 26 : 4 + HIT_Y_OFFSET_BY_SLOT[hitSlot];
+    const yOffset = isActive ? (isFrontCard ? 12 : 8) : isFrontCard ? 26 : 4 + HIT_Y_OFFSET_BY_SLOT[hitSlot];
     const centerY = item.y + yOffset;
-    const width = Math.max(190, item.width + (isActive ? 118 : isFrontCard ? 56 : -24));
-    const height = isActive ? 104 : isFrontCard ? 72 : HIT_HEIGHT_BY_SLOT[hitSlot];
+    const width = isActive ? Math.min(520, Math.max(300, item.width + 86)) : Math.max(174, item.width + (isFrontCard ? 42 : -44));
+    const height = isActive ? Math.max(74, item.height - 10) : isFrontCard ? 62 : HIT_HEIGHT_BY_SLOT[hitSlot];
+    const xOffset = 0;
 
     return {
       centerY,
       height,
       hitSlot,
       width,
+      xOffset,
     };
   };
 
@@ -417,35 +883,53 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
           >
             <div className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}>
               {layout.map(({ card, index, motionSlot, opacity, y, z, width, height, tilt, roll }) => {
-                const isActive = index === activeIndex;
-                const motionDuration = activeIndex !== null || isActive ? 520 : SCROLL_TRANSITION_MS;
+                const isClosingCard = isClosingHandoff && closingSymbol === card.symbol;
+                const isRestoringCard = restoringSymbol === card.symbol;
+                const isActive = !isClosingCard && index === activeIndex;
+                const isHovered = hoveredIndex === index && !isActive && activeIndex === null;
+                const motionDuration = activeIndex !== null || isActive ? ACTIVE_TRANSITION_MS : SCROLL_TRANSITION_MS;
                 const transform = `translate(-50%, -50%) translate3d(0, ${y}px, ${z}px) rotateX(${tilt}deg) rotateZ(${roll}deg) scaleX(${width / 560})`;
+                const isExpandedClone =
+                  detailOverlay?.card.symbol === card.symbol && !isClosingCard;
                 const cardStyle: CSSProperties = {
                   left: "50%",
                   top: "50%",
                   zIndex: isActive ? 70 : Math.max(0, Math.round(motionSlot) + 1),
                   width: "min(560px, 72vw)",
                   minHeight: height,
-                  opacity,
+                  opacity: isExpandedClone || isClosingCard ? 0 : opacity,
                   transform,
                   transformStyle: "preserve-3d",
                   transformOrigin: "50% 50%",
                   willChange: "transform, opacity",
-                  transition: `transform ${motionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), min-height ${motionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow ${motionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), border-color 420ms ease`,
-                  border: isActive ? "1.5px solid rgba(255,255,255,0.8)" : "1px solid rgba(255,255,255,0.08)",
+                  backfaceVisibility: "hidden",
+                  contain: "layout paint style",
+                  transition: isClosingCard || isRestoringCard
+                    ? "none"
+                    : `transform ${motionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease`,
+                  border: isActive
+                    ? "1.5px solid rgba(255,255,255,0.8)"
+                    : isHovered
+                      ? "1px solid rgba(255,255,255,0.34)"
+                      : "1px solid rgba(255,255,255,0.08)",
                   borderRadius: 7,
                   backgroundImage: `linear-gradient(90deg, rgba(4,5,5,0.97) 0%, rgba(8,9,10,0.88) 46%, rgba(10,12,12,0.74) 100%), url(${card.image})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
-                  boxShadow: isActive
-                    ? "0 22px 56px rgba(0,0,0,0.42), 0 2px 0 rgba(255,255,255,0.2) inset"
-                    : "0 12px 22px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.08) inset",
+                  boxShadow: "0 18px 46px rgba(0,0,0,0.36), 0 1px 0 rgba(255,255,255,0.14) inset",
                   overflow: "hidden",
                 };
 
                 return (
                   <article
                     key={card.symbol}
+                    ref={(element) => {
+                      if (element) {
+                        cardRefs.current.set(card.symbol, element);
+                        return;
+                      }
+                      cardRefs.current.delete(card.symbol);
+                    }}
                     data-card-symbol={card.symbol}
                     data-card-active={isActive ? "true" : "false"}
                     className="pointer-events-none absolute select-none text-white"
@@ -463,8 +947,8 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                       <img
                         src={card.image}
                         alt=""
-                        className={`shrink-0 rounded-[4px] object-cover transition-all duration-300 ${
-                          isActive ? "h-12 w-12" : "h-7 w-7"
+                        className={`h-12 w-12 shrink-0 origin-left rounded-[4px] object-cover transition-transform duration-200 ${
+                          isActive ? "scale-100" : "scale-[0.58]"
                         }`}
                       />
 
@@ -483,24 +967,29 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                           {card.name}
                         </h3>
 
-                        {isActive && (
-                          <div className="mt-1.5">
-                            <p className="max-w-[460px] truncate text-xs text-white/66">{card.desc}</p>
-                            <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                              <span className="rounded-full bg-white px-3.5 py-1 text-xs font-semibold text-black">
-                                查看报告
+                        <div
+                          aria-hidden={!isActive}
+                          className={`transition-[opacity,transform] duration-180 ${
+                            isActive
+                              ? "relative mt-1.5 translate-y-0 opacity-100"
+                              : "pointer-events-none absolute left-0 right-20 top-full -translate-y-1 opacity-0"
+                          }`}
+                        >
+                          <p className="max-w-[460px] truncate text-xs text-white/66">{card.desc}</p>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                            <span className="rounded-full border border-white/25 bg-white/12 px-3.5 py-1 text-xs font-semibold text-white/78">
+                              Click to expand
+                            </span>
+                            {card.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded-full border border-white/12 bg-white/8 px-2.5 py-0.5 text-[10px] text-white/72"
+                              >
+                                {tag}
                               </span>
-                              {card.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="rounded-full border border-white/12 bg-white/8 px-2.5 py-0.5 text-[10px] text-white/72"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
+                            ))}
                           </div>
-                        )}
+                        </div>
                       </div>
                     </div>
                   </article>
@@ -534,26 +1023,290 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                     key={card.symbol}
                     data-card-symbol={card.symbol}
                     type="button"
+                    tabIndex={-1}
                     className="absolute cursor-pointer bg-transparent"
                     style={{
                       appearance: "none",
                       border: 0,
+                      outline: "none",
+                      WebkitTapHighlightColor: "transparent",
                       left: "50%",
                       top: `calc(50% + ${hitY}px)`,
                       width: `${metrics.width}px`,
                       height: hitHeight,
                       padding: 0,
-                      transform: "translate(-50%, -50%)",
+                      transform: `translate(calc(-50% + ${metrics.xOffset}px), -50%)`,
                       zIndex: isActive ? 90 : metrics.hitSlot + 1,
+                      clipPath: isActive ? "inset(0)" : "polygon(4% 0, 100% 0, 96% 100%, 0 100%)",
                     }}
-                    onClick={(event) => handleCardClick(index, card.symbol, event.timeStamp)}
+                    onPointerEnter={() => setHoveredIndex(index)}
+                    onPointerLeave={() => setHoveredIndex((current) => (current === index ? null : current))}
+                    onClick={(event) => handleCardClick(index, event)}
                   />
                 );
               })}
             </div>
           </div>
         </div>
+
+        {detailOverlay && (
+          <CompanyDetailOverlay
+            card={detailOverlay.card}
+            detail={detailCache[detailOverlay.card.symbol] ?? fallbackDetail(detailOverlay.card)}
+            targetRect={detailOverlay.targetRect}
+            phase={detailOverlay.phase}
+            heavyReady={detailHeavyReady}
+            detailArticleRef={detailArticleRef}
+            detailContentRef={detailContentRef}
+            detailPanelRef={detailPanelRef}
+            detailCardFaceRef={detailCardFaceRef}
+            onClose={closeDetailOverlay}
+            onWheel={handleDetailWheel}
+            onTouchStart={handleDetailTouchStart}
+            onTouchMove={handleDetailTouchMove}
+          />
+        )}
       </div>
     </section>
+  );
+}
+
+function CompanyDetailOverlay({
+  card,
+  detail,
+  targetRect,
+  phase,
+  heavyReady,
+  detailArticleRef,
+  detailContentRef,
+  detailPanelRef,
+  detailCardFaceRef,
+  onClose,
+  onWheel,
+  onTouchStart,
+  onTouchMove,
+}: {
+  card: RecordCard;
+  detail: CompanyDetailPayload;
+  targetRect: OverlayRect;
+  phase: DetailOverlayState["phase"];
+  heavyReady: boolean;
+  detailArticleRef: RefObject<HTMLElement | null>;
+  detailContentRef: RefObject<HTMLDivElement | null>;
+  detailPanelRef: RefObject<HTMLDivElement | null>;
+  detailCardFaceRef: RefObject<HTMLDivElement | null>;
+  onClose: () => void;
+  onWheel: (event: ReactWheelEvent<HTMLDivElement>) => void;
+  onTouchStart: (event: ReactTouchEvent<HTMLDivElement>) => void;
+  onTouchMove: (event: ReactTouchEvent<HTMLDivElement>) => void;
+}) {
+  const profile = detail.profile ?? fallbackDetail(card).profile;
+  const latestMetrics = detail.latestMetrics;
+  const latestIncome = detail.latestIncome;
+  const incomeData = detail.incomeData ?? [];
+
+  const overlayStyle: CSSProperties = {
+    left: targetRect.left,
+    top: targetRect.top,
+    width: targetRect.width,
+    height: targetRect.height,
+    transformOrigin: "0 0",
+    willChange: "transform",
+  };
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[300]">
+      <article
+        ref={(element) => {
+          detailArticleRef.current = element;
+        }}
+        data-detail-phase={phase}
+        className="pointer-events-auto fixed overflow-hidden text-[#20231d]"
+        style={overlayStyle}
+      >
+        <div
+          ref={(element) => {
+            detailCardFaceRef.current = element;
+          }}
+          data-detail-card-face
+          className="absolute inset-0 border border-white/20 text-white shadow-[0_18px_46px_rgba(0,0,0,0.36),0_1px_0_rgba(255,255,255,0.14)_inset]"
+          style={{
+            backgroundImage: `linear-gradient(90deg, rgba(4,5,5,0.97) 0%, rgba(8,9,10,0.9) 48%, rgba(10,12,12,0.76) 100%), url(${card.image})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0)_42%,rgba(0,0,0,0.2))]" />
+          <div className="absolute right-3 top-2 rounded-[4px] px-2 py-0.5 font-mono text-[10px] font-bold text-[#101211]" style={{ backgroundColor: card.tint }}>
+            {card.change}
+          </div>
+          <div className="relative flex min-h-[42px] items-center gap-3 px-4 py-2.5">
+            <img
+              src={card.image}
+              alt=""
+              className={`h-12 w-12 shrink-0 origin-left rounded-[4px] object-cover transition-transform duration-200 ${
+                phase === "closing" ? "scale-[0.58]" : "scale-100"
+              }`}
+            />
+            <div className="min-w-0 flex-1 pr-20">
+              <div className="mb-1 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+                <span>{card.symbol}</span>
+                <span className="h-1 w-1 rounded-full" style={{ backgroundColor: card.tint }} />
+                <span>{card.sub}</span>
+              </div>
+              <h3
+                className={`truncate font-bold leading-tight tracking-normal text-white transition-all duration-200 ${
+                  phase === "closing" ? "text-sm" : "text-lg"
+                }`}
+              >
+                {card.name}
+              </h3>
+              <p
+                className={`mt-1.5 max-w-[460px] truncate text-xs text-white/66 transition-[opacity,transform] duration-160 ${
+                  phase === "closing" ? "-translate-y-1 opacity-0" : "translate-y-0 opacity-100"
+                }`}
+              >
+                {card.desc}
+              </p>
+              <div
+                className={`mt-1.5 flex flex-wrap items-center gap-2 transition-[opacity,transform] duration-160 ${
+                  phase === "closing" ? "-translate-y-1 opacity-0" : "translate-y-0 opacity-100"
+                }`}
+              >
+                <span className="rounded-full border border-white/25 bg-white/12 px-3.5 py-1 text-xs font-semibold text-white/78">
+                  Click to expand
+                </span>
+                {card.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full border border-white/12 bg-white/8 px-2.5 py-0.5 text-[10px] text-white/72"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          ref={(element) => {
+            detailPanelRef.current = element;
+          }}
+          data-detail-panel
+          className="absolute inset-0 z-10 border border-[#d7d8cd] bg-[#f8f7f2] shadow-[0_24px_70px_rgba(36,39,30,0.24),0_1px_0_rgba(255,255,255,0.7)_inset]"
+          aria-hidden="true"
+        >
+          <div className="absolute inset-x-0 top-0 h-40 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0))]" />
+          <div className="absolute inset-y-0 left-0 w-10 bg-[linear-gradient(90deg,rgba(152,163,111,0.16),rgba(152,163,111,0))]" />
+          <div className="absolute inset-y-0 right-0 w-10 bg-[linear-gradient(270deg,rgba(246,83,112,0.12),rgba(246,83,112,0))]" />
+        </div>
+
+        <div
+          ref={(element) => {
+            detailContentRef.current = element;
+          }}
+          data-detail-scroll
+          className="relative z-20 h-full touch-pan-y overflow-y-auto overscroll-contain"
+          onWheel={onWheel}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+        >
+          <header className="px-8 pb-5 pt-7 text-center">
+            <div className="mb-4 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-[#62645d]">
+              <span>Stock Insight Archive</span>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-[5px] bg-[#57584f] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-white shadow-[0_8px_16px_rgba(0,0,0,0.16)] transition hover:bg-[#34362f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f65370]"
+              >
+                Back
+              </button>
+            </div>
+
+            <div className="relative mx-auto flex h-40 w-full max-w-[420px] items-center justify-center overflow-hidden bg-[#090a0a] shadow-[0_18px_42px_rgba(0,0,0,0.24)]">
+              <div className="absolute h-40 w-full max-w-[420px] bg-[radial-gradient(circle_at_68%_40%,rgba(255,255,255,0.22),transparent_22%),linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0)_42%),linear-gradient(90deg,#070909,#171a18)]" />
+              {profile?.image && (
+                <img src={profile.image} alt="" className="relative z-10 h-16 w-16 rounded-[6px] bg-white object-contain p-2 shadow-[0_14px_36px_rgba(0,0,0,0.28)]" />
+              )}
+              <div className="relative z-10 ml-5 text-left">
+                <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-white/45">{profile?.symbol ?? card.symbol}</p>
+                <p className="mt-2 max-w-[260px] text-xl font-semibold leading-tight text-white">{profile?.companyName ?? card.sub}</p>
+              </div>
+            </div>
+
+            <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.28em] text-[#9c9f74]">
+              {profile?.sector || "Company Research"} / {profile?.industry || "Analysis"}
+            </p>
+            <h1 className="mx-auto mt-2 max-w-[620px] text-[clamp(1.8rem,3.2vw,2.9rem)] font-bold leading-[0.98] text-[#7d8178]">
+              {profile?.companyName ?? card.sub}
+            </h1>
+            <p className="mx-auto mt-3 max-w-[560px] text-sm leading-6 text-[#5b5e57]">
+              {profile?.description || card.desc}
+            </p>
+          </header>
+
+          <section className="grid grid-cols-2 gap-3 px-8 pb-8 md:grid-cols-4">
+            <MetricCard label="Price" value={profile?.price ? `$${profile.price}` : "Loading"} />
+            <MetricCard label="Change" value={profile?.change !== undefined ? `${profile.change >= 0 ? "+" : ""}${profile.change.toFixed(2)}%` : card.change} tone={(profile?.change ?? 0) >= 0 ? "up" : "down"} />
+            <MetricCard label="Market Cap" value={profile?.marketCap ? formatCurrency(profile.marketCap) : "Loading"} />
+            <MetricCard label="P/E" value={detail.peRatio ? detail.peRatio.toFixed(1) : "N/A"} />
+            <MetricCard label="ROE" value={latestMetrics ? formatPercent(latestMetrics.returnOnEquity) : "N/A"} />
+            <MetricCard label="ROA" value={latestMetrics ? formatPercent(latestMetrics.returnOnAssets) : "N/A"} />
+            <MetricCard label="EV/EBITDA" value={latestMetrics ? formatMultiple(latestMetrics.evToEBITDA) : "N/A"} />
+            <MetricCard label="Revenue" value={latestIncome ? formatCurrency(latestIncome.revenue) : "N/A"} />
+          </section>
+
+          <section className="space-y-4 px-8 pb-8">
+            {heavyReady && incomeData.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <RevenueChart data={incomeData} />
+                  <MarginChart data={incomeData} />
+                </div>
+                <EPSChart data={incomeData} />
+              </>
+            ) : (
+              <FinancialChartPlaceholder />
+            )}
+          </section>
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function FinancialChartPlaceholder() {
+  return (
+    <div className="border border-[#dcddd2] bg-[#f8f7f2] px-5 py-5 text-[#3e4239]">
+      <div className="mb-4 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-[#898b82]">
+        <span>Financial modules</span>
+        <span>Loading data</span>
+      </div>
+      <div className="grid grid-cols-6 items-end gap-2 border border-[#e0dfd5] bg-[#fdfcf7] p-4">
+        {[34, 52, 45, 68, 61, 78].map((height, index) => (
+          <div key={index} className="flex h-28 items-end border-l border-[#ece9de] pl-1">
+            <div
+              className="w-full bg-[#69715e]"
+              style={{ height: `${height}%`, opacity: 0.52 + index * 0.055 }}
+            />
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-center font-mono text-[9px] uppercase tracking-[0.2em] text-[#98998e]">
+        Revenue / margin / EPS charts will appear here when data is available
+      </p>
+    </div>
+  );
+}
+
+function MetricCard({ label, value, tone }: { label: string; value: string; tone?: "up" | "down" }) {
+  const toneClass = tone === "up" ? "text-[#267c4a]" : tone === "down" ? "text-[#bd3850]" : "text-[#1f221d]";
+
+  return (
+    <div className="rounded-[4px] border border-[#dcddd2] bg-[#f8f7f2] px-3 py-2.5">
+      <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#898b82]">{label}</div>
+      <div className={`mt-1 truncate text-sm font-bold ${toneClass}`}>{value}</div>
+    </div>
   );
 }
