@@ -253,12 +253,7 @@ const SPRING_TRANSITION = {
   mass: 1.1,
 };
 
-const SPRING_EXTRACT = {
-  type: "spring" as const,
-  stiffness: 380,
-  damping: 26,
-  mass: 0.8,
-};
+
 
 const toOverlayRect = (rect: DOMRect): OverlayRect => ({
   left: rect.left,
@@ -930,7 +925,6 @@ function CompanyDetailOverlay({
   const latestIncome = detail.latestIncome;
   const incomeData = detail.incomeData ?? [];
 
-  const controls = useAnimationControls();
   const cardFaceControls = useAnimationControls();
   const panelControls = useAnimationControls();
   const contentControls = useAnimationControls();
@@ -941,43 +935,19 @@ function CompanyDetailOverlay({
   const scaleX = fromRect.width / targetRect.width;
   const scaleY = fromRect.height / targetRect.height;
 
-  // 抽离阶段的中间态偏移
-  const extractX = deltaX * 0.88;
-  const extractY = deltaY - 36;
-  const extractScaleX = scaleX * 1.1;
-  const extractScaleY = scaleY * 1.1;
-
-  // 重叠式两阶段 spring：阶段2在阶段1尚未静止时就启动，消除停顿
+  // 单 spring 直接展开：从卡片原位自然放大到最终位置
   useEffect(() => {
-    // 阶段1: 抽离 — 立即启动
-    controls.start({
-      x: extractX,
-      y: extractY,
-      scaleX: extractScaleX,
-      scaleY: extractScaleY,
-      rotateX: fromTilt * 1.6,
-      rotateZ: fromRoll * 0.4,
-      transition: SPRING_EXTRACT,
-    });
-
-    // 阶段2: 展开 — 在抽离动画进行到约60%时启动，形成连续运动
-    const expandTimer = setTimeout(() => {
-      cardFaceControls.start({ opacity: 0, transition: { duration: 0.22 } });
-      panelControls.start({ opacity: 1, transition: { duration: 0.2 } });
-      controls.start({
-        x: 0, y: 0, scaleX: 1, scaleY: 1,
-        rotateX: 0, rotateZ: 0,
-        transition: SPRING_TRANSITION,
-      });
-    }, 140);
-
-    // 内容淡入 — 稍晚启动，等面板可见后再显示
+    // 卡面淡出、面板淡入 — 展开过程中同步进行
+    const fadeTimer = setTimeout(() => {
+      cardFaceControls.start({ opacity: 0, transition: { duration: 0.25 } });
+      panelControls.start({ opacity: 1, transition: { duration: 0.25 } });
+    }, 80);
+    // 内容淡入 — 稍晚，等面板可见
     const contentTimer = setTimeout(() => {
       contentControls.start({ opacity: 1, y: 0, transition: SPRING_TRANSITION });
-    }, 320);
-
+    }, 250);
     return () => {
-      clearTimeout(expandTimer);
+      clearTimeout(fadeTimer);
       clearTimeout(contentTimer);
     };
   }, []);
@@ -1004,7 +974,16 @@ function CompanyDetailOverlay({
           rotateZ: fromRoll,
           borderRadius: 7,
         }}
-        animate={controls}
+        animate={{
+          x: 0,
+          y: 0,
+          scaleX: 1,
+          scaleY: 1,
+          rotateX: 0,
+          rotateZ: 0,
+          borderRadius: 12,
+          transition: SPRING_TRANSITION,
+        }}
         exit={{
           x: deltaX,
           y: deltaY,
