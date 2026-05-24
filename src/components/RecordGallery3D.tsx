@@ -965,9 +965,9 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                 const cardTransition = isExpandedOrClosing ? springTransition : stackTween;
                 const cardAnimate = {
                   y: isExpanded ? 0 : visual.y,
-                  z: isExpandedOrClosing ? 0 : visual.z,
-                  rotateX: isExpandedOrClosing ? 0 : visual.tilt,
-                  rotateZ: isExpandedOrClosing ? 0 : visual.roll,
+                  z: isExpanded ? 0 : visual.z,
+                  rotateX: isExpanded ? 0 : visual.tilt,
+                  rotateZ: isExpanded ? 0 : visual.roll,
                   scaleX: isExpanded ? 1 : visual.scaleX,
                   width: isExpanded ? expandW : stackWidth,
                   height: isExpanded ? expandH : visual.height,
@@ -1017,7 +1017,6 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                       left: "50%",
                       top: "50%",
                       zIndex: isExpandedOrClosing ? 200 : visual.zIndex,
-                      transformStyle: "preserve-3d",
                       transformOrigin: "50% 50%",
                       willChange: "transform, width, height",
                       backfaceVisibility: "hidden",
@@ -1025,10 +1024,8 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                     }}
                     onAnimationComplete={() => {
                       if (closingSymbol === card.symbol) {
-                        requestAnimationFrame(() => {
-                          setClosingSymbol(null);
-                          activeSinceRef.current = performance.now();
-                        });
+                        setClosingSymbol(null);
+                        activeSinceRef.current = performance.now();
                       }
                     }}
                   >
