@@ -471,18 +471,15 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
 
     setIsRouting(true);
     warmCompanyDetail(card);
-    detailTimerRef.current = setTimeout(() => {
-      const layoutItem = layout.find((item) => item.index === index);
-      detailTimerRef.current = null;
-      setDetailOverlay({
-        card,
-        fromRect: toOverlayRect(cardElement.getBoundingClientRect()),
-        targetRect: getDetailTargetRect(),
-        fromTilt: layoutItem?.tilt ?? -16,
-        fromRoll: layoutItem?.roll ?? 0,
-        phase: "opening",
-      });
-    }, DETAIL_OPEN_CARD_DELAY_MS);
+    const layoutItem = layout.find((item) => item.index === index);
+    setDetailOverlay({
+      card,
+      fromRect: toOverlayRect(cardElement.getBoundingClientRect()),
+      targetRect: getDetailTargetRect(),
+      fromTilt: layoutItem?.tilt ?? -16,
+      fromRoll: layoutItem?.roll ?? 0,
+      phase: "opening",
+    });
   };
 
   const closeDetailOverlay = () => {
@@ -515,18 +512,23 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     };
 
     const finishClose = () => {
-      detailArticleRef.current = null;
-      detailContentRef.current = null;
-      detailPanelRef.current = null;
-      detailCardFaceRef.current = null;
+      // Phase 1: 让卡片在 overlay 下方先显现（isRestoringCard=true 绕过 isExpandedClone 隐藏）
       detailTimelineRef.current = null;
       detailClosingRef.current = false;
       setIsClosingHandoff(false);
       setClosingSymbol(null);
       setRestoringSymbol(current.card.symbol);
-      setDetailHeavyReadySymbol(null);
-      setDetailOverlay(null);
-      activeSinceRef.current = performance.now();
+
+      // Phase 2: 等卡片绘制完成后再移除 overlay，消除视觉断层
+      requestAnimationFrame(() => {
+        detailArticleRef.current = null;
+        detailContentRef.current = null;
+        detailPanelRef.current = null;
+        detailCardFaceRef.current = null;
+        setDetailHeavyReadySymbol(null);
+        setDetailOverlay(null);
+        activeSinceRef.current = performance.now();
+      });
     };
 
     const timeline = gsap.timeline({
@@ -564,7 +566,9 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
           force3D: true,
         },
         0.02,
-      );
+      )
+      // 末尾交叉淡出：overlay 渐隐，卡片已在下方显现，消除硬切换
+      .to(article, { autoAlpha: 0, duration: 0.08, ease: "power2.in" }, ">-0.08");
   };
 
   const handleDetailWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
@@ -897,7 +901,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                   zIndex: isActive ? 70 : Math.max(0, Math.round(motionSlot) + 1),
                   width: "min(560px, 72vw)",
                   minHeight: height,
-                  opacity: isExpandedClone || isClosingCard ? 0 : opacity,
+                  opacity: (isExpandedClone && !isRestoringCard) || isClosingCard ? 0 : opacity,
                   transform,
                   transformStyle: "preserve-3d",
                   transformOrigin: "50% 50%",
