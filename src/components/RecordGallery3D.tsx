@@ -1,17 +1,19 @@
 "use client";
 
-import { motion, AnimatePresence, useAnimationControls } from "motion/react";
+import { animate, AnimatePresence, motion, useMotionValue, useTransform, type MotionValue } from "motion/react";
 import {
   useEffect,
   useMemo,
   useRef,
   useState,
   useCallback,
+  type ComponentProps,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type TouchEvent as ReactTouchEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
+import { flushSync } from "react-dom";
 import EPSChart from "@/components/charts/EPSChart";
 import MarginChart from "@/components/charts/MarginChart";
 import RevenueChart from "@/components/charts/RevenueChart";
@@ -64,60 +66,60 @@ type CompanyDetailPayload = {
 const CARDS: RecordCard[] = [
   {
     symbol: "AAPL",
-    name: "苹果",
+    name: "Apple",
     sub: "Apple Inc.",
-    desc: "硬件生态、服务收入与端侧 AI 共同支撑现金流韧性。",
-    tags: ["科技", "消费", "AI"],
+    desc: "Hardware ecosystem, services revenue, and on-device AI support resilient cash flow.",
+    tags: ["Tech", "Consumer", "AI"],
     image: "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?w=900&q=80",
     tint: "#7dd3fc",
     change: "+1.8%",
   },
   {
     symbol: "MSFT",
-    name: "微软",
+    name: "Microsoft",
     sub: "Microsoft",
-    desc: "Azure 与 Copilot 商业化同步推进，云业务仍是估值锚点。",
-    tags: ["云", "SaaS", "AI"],
+    desc: "Azure and Copilot commercialization continue to anchor cloud-driven valuation.",
+    tags: ["Cloud", "SaaS", "AI"],
     image: "https://images.unsplash.com/photo-1633419461186-7d40a38105ec?w=900&q=80",
     tint: "#60a5fa",
     change: "+2.1%",
   },
   {
     symbol: "NVDA",
-    name: "英伟达",
+    name: "NVIDIA",
     sub: "NVIDIA",
-    desc: "数据中心 GPU 需求延续，AI 资本开支周期仍在扩张。",
-    tags: ["芯片", "AI"],
+    desc: "Data-center GPU demand remains elevated as AI capital spending expands.",
+    tags: ["Chips", "AI"],
     image: "https://images.unsplash.com/photo-1625842268584-8f3296236761?w=900&q=80",
     tint: "#4ade80",
     change: "+3.4%",
   },
   {
     symbol: "GOOGL",
-    name: "谷歌",
+    name: "Alphabet",
     sub: "Alphabet",
-    desc: "搜索广告稳健，Gemini 与云平台提供新的增长弹性。",
-    tags: ["广告", "云", "AI"],
+    desc: "Search ads stay durable while Gemini and cloud add new growth optionality.",
+    tags: ["Ads", "Cloud", "AI"],
     image: "https://images.unsplash.com/photo-1573804633927-bfcbcd909acd?w=900&q=80",
     tint: "#facc15",
     change: "+0.9%",
   },
   {
     symbol: "AMZN",
-    name: "亚马逊",
+    name: "Amazon",
     sub: "Amazon",
-    desc: "电商效率改善叠加 AWS 复苏，利润率中枢继续上移。",
-    tags: ["电商", "云"],
+    desc: "Retail efficiency and AWS recovery continue to lift margin expectations.",
+    tags: ["Commerce", "Cloud"],
     image: "https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?w=900&q=80",
     tint: "#f59e0b",
     change: "+1.2%",
   },
   {
     symbol: "TSLA",
-    name: "特斯拉",
+    name: "Tesla",
     sub: "Tesla",
-    desc: "电动车、能源储能与自动驾驶叙事共同影响估值波动。",
-    tags: ["汽车", "能源", "AI"],
+    desc: "EV demand, energy storage, and autonomy narratives drive valuation swings.",
+    tags: ["Auto", "Energy", "AI"],
     image: "https://images.unsplash.com/photo-1617788138017-80ad40651399?w=900&q=80",
     tint: "#fb7185",
     change: "-0.6%",
@@ -126,58 +128,58 @@ const CARDS: RecordCard[] = [
     symbol: "META",
     name: "Meta",
     sub: "Meta Platforms",
-    desc: "广告业务现金流强劲，AI 推荐系统继续提升平台效率。",
-    tags: ["广告", "社交", "AI"],
+    desc: "Advertising cash flow remains strong as AI ranking improves platform efficiency.",
+    tags: ["Ads", "Social", "AI"],
     image: "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=900&q=80",
     tint: "#a78bfa",
     change: "+2.6%",
   },
   {
     symbol: "JPM",
-    name: "摩根大通",
+    name: "JPMorgan",
     sub: "JPMorgan Chase",
-    desc: "资产负债表质量与存款规模优势，使其保持银行业领先地位。",
-    tags: ["金融", "银行"],
+    desc: "Balance-sheet quality and deposit scale keep it ahead of banking peers.",
+    tags: ["Finance", "Banking"],
     image: "https://images.unsplash.com/photo-1501167786227-4cba60f6d58f?w=900&q=80",
     tint: "#38bdf8",
     change: "+0.4%",
   },
   {
     symbol: "V",
-    name: "维萨",
+    name: "Visa",
     sub: "Visa Inc.",
-    desc: "全球支付网络规模效应强，跨境交易恢复带来收入弹性。",
-    tags: ["支付", "消费"],
+    desc: "Global payment network effects and cross-border recovery support revenue elasticity.",
+    tags: ["Payments", "Consumer"],
     image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=900&q=80",
     tint: "#818cf8",
     change: "+0.7%",
   },
   {
     symbol: "AVGO",
-    name: "博通",
+    name: "Broadcom",
     sub: "Broadcom",
-    desc: "定制 AI 芯片需求增长，VMware 整合提升软件收入占比。",
-    tags: ["芯片", "软件"],
+    desc: "Custom AI silicon demand and VMware integration increase software mix.",
+    tags: ["Chips", "Software"],
     image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=900&q=80",
     tint: "#f472b6",
     change: "+1.9%",
   },
   {
     symbol: "UNH",
-    name: "联合健康",
+    name: "UnitedHealth",
     sub: "UnitedHealth",
-    desc: "医保、药房福利与医疗服务纵向整合，提供稳定防御属性。",
-    tags: ["医疗", "保险"],
+    desc: "Insurance, pharmacy benefits, and care services provide defensive stability.",
+    tags: ["Healthcare", "Insurance"],
     image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=900&q=80",
     tint: "#2dd4bf",
     change: "-0.3%",
   },
   {
     symbol: "BRK.B",
-    name: "伯克希尔",
+    name: "Berkshire",
     sub: "Berkshire Hathaway",
-    desc: "保险浮存金、能源铁路与权益投资组合构成长期价值底盘。",
-    tags: ["价值", "保险"],
+    desc: "Insurance float, energy, rail, and equity holdings form a long-term value base.",
+    tags: ["Value", "Insurance"],
     image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=900&q=80",
     tint: "#fbbf24",
     change: "+0.5%",
@@ -203,13 +205,10 @@ const CONFIRM_CLICK_DELAY_MS = 110;
 const SWITCH_REOPEN_DELAY_MS = 50;
 const FRONT_ACTIVE_START = VISIBLE_COUNT - 1.45;
 const ACTIVE_TRANSITION_MS = 220;
-const DETAIL_OPEN_CARD_DELAY_MS = 0;
 const DETAIL_PANEL_MAX_WIDTH = 680;
 const DETAIL_PANEL_MAX_HEIGHT = 500;
 const DETAIL_PANEL_WIDTH_RATIO = 0.76;
 const DETAIL_PANEL_HEIGHT_RATIO = 0.66;
-const DETAIL_OPEN_DURATION = 0.58;
-const DETAIL_CLOSE_DURATION = 0.48;
 const DETAIL_HEAVY_CONTENT_DELAY_MS = 180;
 
 type RecordGallery3DProps = {
@@ -238,21 +237,245 @@ type CardLayoutItem = {
   roll: number;
 };
 
+type CardFaceMode = "stack" | "active" | "detail";
+
+type CardVisualState = {
+  y: number;
+  z: number;
+  width: number;
+  height: number;
+  scaleX: number;
+  tilt: number;
+  roll: number;
+  zIndex: number;
+  opacity: number;
+  radius: number;
+  borderWidth: number;
+  borderOpacity: number;
+  shadowStrength: number;
+  imageScale: number;
+  compactTitleOpacity: number;
+  detailTitleOpacity: number;
+  metaOpacity: number;
+  descriptionOpacity: number;
+  hintOpacity: number;
+};
+
+type CardFaceNumberValue = number | MotionValue<number>;
+type CardFaceStringValue = string | MotionValue<string>;
+
+type CardFaceRenderState = {
+  height: CardFaceNumberValue;
+  radius: CardFaceNumberValue;
+  borderWidth: CardFaceNumberValue;
+  borderColor: CardFaceStringValue;
+  boxShadow: CardFaceStringValue;
+  imageScale: CardFaceNumberValue;
+  compactTitleOpacity: CardFaceNumberValue;
+  detailTitleOpacity: CardFaceNumberValue;
+  metaOpacity: CardFaceNumberValue;
+  descriptionOpacity: CardFaceNumberValue;
+  descriptionY: CardFaceNumberValue;
+  hintOpacity: CardFaceNumberValue;
+};
+
 type DetailOverlayState = {
   card: RecordCard;
   fromRect: OverlayRect;
   targetRect: OverlayRect;
-  fromTilt: number;
-  fromRoll: number;
+  fromVisual: CardVisualState;
+  phase: "opening" | "open" | "closing";
+  closeRect?: OverlayRect;
+  closeVisual?: CardVisualState;
 };
 
-const SPRING_TRANSITION = {
+const DETAIL_SURFACE_OPEN_TRANSITION = {
   type: "spring" as const,
-  stiffness: 120,
-  damping: 18,
-  mass: 1.1,
+  stiffness: 68,
+  damping: 19,
+  mass: 0.98,
+  restDelta: 0.06,
+  restSpeed: 6,
 };
 
+const DETAIL_SURFACE_CLOSE_TRANSITION = {
+  type: "spring" as const,
+  stiffness: 64,
+  damping: 19,
+  mass: 1,
+  restDelta: 0.012,
+  restSpeed: 1.2,
+};
+
+const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
+
+const mix = (from: number, to: number, progress: number) => from + (to - from) * progress;
+
+const smoothstep = (value: number) => {
+  const x = clamp(value);
+  return x * x * (3 - 2 * x);
+};
+
+const getCardVisualState = (item: CardLayoutItem, mode: CardFaceMode): CardVisualState => {
+  const isActive = mode === "active";
+  const isDetail = mode === "detail";
+
+  return {
+    y: item.y,
+    z: item.z,
+    width: item.width,
+    height: isDetail ? 124 : item.height,
+    scaleX: isDetail ? 1 : item.width / 560,
+    tilt: isDetail ? 0 : item.tilt,
+    roll: isDetail ? 0 : item.roll,
+    zIndex: isDetail ? 300 : isActive ? 70 : Math.max(0, Math.round(item.motionSlot) + 1),
+    opacity: item.opacity,
+    radius: isDetail ? 12 : 7,
+    borderWidth: isActive ? 1.5 : 1,
+    borderOpacity: isActive ? 0.8 : 0.08,
+    shadowStrength: isDetail ? 1.06 : 1,
+    imageScale: isActive || isDetail ? 1 : 0.58,
+    compactTitleOpacity: isDetail ? 0 : isActive ? 0.08 : 1,
+    detailTitleOpacity: isDetail ? 1 : isActive ? 1 : 0,
+    metaOpacity: isDetail ? 0.45 : isActive ? 0.45 : 0.45,
+    descriptionOpacity: isActive || isDetail ? 1 : 0,
+    hintOpacity: isActive ? 1 : isDetail ? 0 : 0,
+  };
+};
+
+const getFallbackCardVisualState = (card: RecordCard, rect: OverlayRect): CardVisualState =>
+  getCardVisualState(
+    {
+      card,
+      index: 0,
+      slot: 0,
+      motionSlot: 0,
+      opacity: 1,
+      isClickableSlot: true,
+      y: 0,
+      z: -215,
+      width: rect.width,
+      height: rect.height,
+      tilt: -26,
+      roll: 0,
+    },
+    "stack",
+  );
+
+const getCardFaceRenderState = (visual: CardVisualState): CardFaceRenderState => ({
+  height: visual.height,
+  radius: visual.radius,
+  borderWidth: visual.borderWidth,
+  borderColor: `rgba(255,255,255,${visual.borderOpacity})`,
+  boxShadow: `0 ${18 * visual.shadowStrength}px ${46 * visual.shadowStrength}px rgba(0,0,0,0.36), 0 1px 0 rgba(255,255,255,0.14) inset`,
+  imageScale: visual.imageScale,
+  compactTitleOpacity: visual.compactTitleOpacity,
+  detailTitleOpacity: visual.detailTitleOpacity,
+  metaOpacity: visual.metaOpacity,
+  descriptionOpacity: visual.descriptionOpacity,
+  descriptionY: visual.descriptionOpacity > 0 ? 0 : -4,
+  hintOpacity: visual.hintOpacity,
+});
+
+function CardFace({
+  card,
+  state,
+  className,
+  style,
+}: {
+  card: RecordCard;
+  state: CardFaceRenderState;
+  className?: string;
+  style?: ComponentProps<typeof motion.div>["style"];
+}) {
+  return (
+    <motion.div
+      className={`relative overflow-hidden text-white ${className ?? ""}`}
+      style={{
+        height: state.height,
+        borderRadius: state.radius,
+        borderWidth: state.borderWidth,
+        borderStyle: "solid",
+        borderColor: state.borderColor,
+        backgroundImage: `linear-gradient(90deg, rgba(4,5,5,0.97) 0%, rgba(8,9,10,0.88) 46%, rgba(10,12,12,0.74) 100%), url(${card.image})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        boxShadow: state.boxShadow,
+        ...style,
+      }}
+    >
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0)_42%,rgba(0,0,0,0.2))]" />
+      <div
+        className="absolute right-3 top-2 rounded-[4px] px-2 py-0.5 font-mono text-[10px] font-bold text-[#101211]"
+        style={{ backgroundColor: card.tint }}
+      >
+        {card.change}
+      </div>
+
+      <div className="relative flex min-h-[42px] items-center gap-3 px-4 py-2.5">
+        <motion.img
+          src={card.image}
+          alt=""
+          className="h-12 w-12 shrink-0 origin-left rounded-[4px] object-cover"
+          style={{ scale: state.imageScale }}
+        />
+
+        <div className="min-w-0 flex-1 pr-20">
+          <motion.div
+            className="mb-1 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-white"
+            style={{ opacity: state.metaOpacity }}
+          >
+            <span>{card.symbol}</span>
+            <span className="h-1 w-1 rounded-full" style={{ backgroundColor: card.tint }} />
+            <span>{card.sub}</span>
+          </motion.div>
+
+          <div className="relative leading-tight">
+            <motion.h3
+              className="truncate text-sm font-bold leading-tight tracking-normal text-white"
+              style={{ opacity: state.compactTitleOpacity }}
+            >
+              {card.name}
+            </motion.h3>
+            <motion.h3
+              aria-hidden="true"
+              className="absolute inset-x-0 top-0 truncate text-lg font-bold leading-tight tracking-normal text-white"
+              style={{ opacity: state.detailTitleOpacity }}
+            >
+              {card.name}
+            </motion.h3>
+          </div>
+
+          <motion.div
+            className="mt-1.5"
+            style={{
+              opacity: state.descriptionOpacity,
+              y: state.descriptionY,
+            }}
+          >
+            <p className="max-w-[460px] truncate text-xs text-white/66">{card.desc}</p>
+            <motion.div
+              className="mt-1.5 flex flex-wrap items-center gap-2"
+              style={{ opacity: state.hintOpacity }}
+            >
+              <span className="rounded-full border border-white/25 bg-white/12 px-3.5 py-1 text-xs font-semibold text-white/78">
+                Click to expand
+              </span>
+              {card.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border border-white/12 bg-white/8 px-2.5 py-0.5 text-[10px] text-white/72"
+                >
+                  {tag}
+                </span>
+              ))}
+            </motion.div>
+          </motion.div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 
 const toOverlayRect = (rect: DOMRect): OverlayRect => ({
@@ -359,6 +582,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   const [detailOverlay, setDetailOverlay] = useState<DetailOverlayState | null>(null);
   const [detailCache, setDetailCache] = useState<Record<string, CompanyDetailPayload>>({});
   const [detailHeavyReadySymbol, setDetailHeavyReadySymbol] = useState<string | null>(null);
+  const [restoringSymbol, setRestoringSymbol] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const cardRefs = useRef(new Map<string, HTMLElement>());
   const detailCacheRef = useRef(new Map<string, CompanyDetailPayload>());
@@ -470,23 +694,90 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     setIsRouting(true);
     warmCompanyDetail(card);
     const layoutItem = layout.find((item) => item.index === index);
+    const fromRect = toOverlayRect(cardElement.getBoundingClientRect());
+    const fromVisual = layoutItem
+      ? getCardVisualState(layoutItem, layoutItem.index === activeIndex ? "active" : "stack")
+      : getFallbackCardVisualState(card, fromRect);
     setDetailOverlay({
       card,
-      fromRect: toOverlayRect(cardElement.getBoundingClientRect()),
+      fromRect,
       targetRect: getDetailTargetRect(),
-      fromTilt: layoutItem?.tilt ?? -16,
-      fromRoll: layoutItem?.roll ?? 0,
+      fromVisual,
+      phase: "opening",
     });
   };
 
   const closeDetailOverlay = () => {
+    const current = detailOverlay;
+    if (!current || current.phase === "closing") return;
+
+    flushSync(() => {
+      setDetailOverlay((latest) =>
+        latest
+          ? {
+              ...latest,
+              phase: "closing",
+            }
+          : latest,
+      );
+      setIsRouting(false);
+      setActiveIndex(null);
+      setHoveredIndex(null);
+      setDetailHeavyReadySymbol(null);
+    });
+
+    const stackCard = cardRefs.current.get(current.card.symbol);
+    const closeRect = stackCard ? toOverlayRect(stackCard.getBoundingClientRect()) : current.fromRect;
+    const closeLayoutItem = layout.find((item) => item.card.symbol === current.card.symbol);
+    const closeVisual = closeLayoutItem
+      ? getCardVisualState(closeLayoutItem, "stack")
+      : getFallbackCardVisualState(current.card, closeRect);
+
+    flushSync(() => {
+      setDetailOverlay((latest) =>
+        latest
+          ? {
+              ...latest,
+              closeRect,
+              closeVisual,
+            }
+          : latest,
+      );
+    });
+  };
+
+  const finishDetailClose = useCallback(() => {
+    setRestoringSymbol(detailOverlay?.card.symbol ?? null);
     setDetailOverlay(null);
     setDetailHeavyReadySymbol(null);
-    setIsRouting(false);
-    setActiveIndex(null);
     setHoveredIndex(null);
+    setIsRouting(false);
     activeSinceRef.current = performance.now();
-  };
+  }, [detailOverlay?.card.symbol]);
+
+  const finishDetailOpen = useCallback((symbol: string) => {
+    setDetailOverlay((latest) =>
+      latest && latest.card.symbol === symbol && latest.phase === "opening"
+        ? { ...latest, phase: "open" }
+        : latest,
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!restoringSymbol) return;
+
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        setRestoringSymbol(null);
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [restoringSymbol]);
 
   const handleDetailWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     event.stopPropagation();
@@ -510,7 +801,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     return () => {
       window.clearTimeout(timer);
     };
-  }, [detailOverlay?.card.symbol]);
+  }, [detailOverlay]);
 
   const detailHeavyReady = detailHeavyReadySymbol === detailOverlay?.card.symbol;
 
@@ -714,38 +1005,51 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                 const isActive = index === activeIndex;
                 const isHovered = hoveredIndex === index && !isActive && activeIndex === null;
                 const motionDuration = activeIndex !== null || isActive ? ACTIVE_TRANSITION_MS : SCROLL_TRANSITION_MS;
-                const transform = `translate(-50%, -50%) translate3d(0, ${y}px, ${z}px) rotateX(${tilt}deg) rotateZ(${roll}deg) scaleX(${width / 560})`;
+                const item = {
+                  card,
+                  index,
+                  slot: 0,
+                  motionSlot,
+                  opacity,
+                  isClickableSlot: true,
+                  y,
+                  z,
+                  width,
+                  height,
+                  tilt,
+                  roll,
+                };
+                const visual = getCardVisualState(item, isActive ? "active" : "stack");
+                const faceState = getCardFaceRenderState(visual);
+                const transform = `translate(-50%, -50%) translate3d(0, ${visual.y}px, ${visual.z}px) rotateX(${visual.tilt}deg) rotateZ(${visual.roll}deg) scaleX(${visual.scaleX})`;
                 const isExpandedClone = detailOverlay?.card.symbol === card.symbol;
+                if (isExpandedClone) return null; // 一体化：选中的卡片从 stack 中移除，不是隐藏
+                const isRestoringCard = restoringSymbol === card.symbol;
                 const cardStyle: CSSProperties = {
                   left: "50%",
                   top: "50%",
-                  zIndex: isActive ? 70 : Math.max(0, Math.round(motionSlot) + 1),
+                  zIndex: visual.zIndex,
                   width: "min(560px, 72vw)",
-                  minHeight: height,
-                  opacity: isExpandedClone ? 0 : opacity,
+                  opacity: visual.opacity,
                   transform,
                   transformStyle: "preserve-3d",
                   transformOrigin: "50% 50%",
                   willChange: "transform, opacity",
                   backfaceVisibility: "hidden",
                   contain: "layout paint style",
-                  transition: `transform ${motionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease`,
-                  border: isActive
-                    ? "1.5px solid rgba(255,255,255,0.8)"
-                    : isHovered
-                      ? "1px solid rgba(255,255,255,0.34)"
-                      : "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 7,
-                  backgroundImage: `linear-gradient(90deg, rgba(4,5,5,0.97) 0%, rgba(8,9,10,0.88) 46%, rgba(10,12,12,0.74) 100%), url(${card.image})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  boxShadow: "0 18px 46px rgba(0,0,0,0.36), 0 1px 0 rgba(255,255,255,0.14) inset",
-                  overflow: "hidden",
+                  transition: isRestoringCard
+                    ? "none"
+                    : `transform ${motionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease`,
+                };
+                const renderState = {
+                  ...faceState,
+                  borderColor: isHovered ? "rgba(255,255,255,0.34)" : faceState.borderColor,
                 };
 
                 return (
-                  <article
+                  <motion.article
                     key={card.symbol}
+                    layoutId={`card-${card.symbol}`}
                     ref={(element) => {
                       if (element) {
                         cardRefs.current.set(card.symbol, element);
@@ -758,64 +1062,8 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                     className="pointer-events-none absolute select-none text-white"
                     style={cardStyle}
                   >
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0)_42%,rgba(0,0,0,0.2))]" />
-                    <div
-                      className="absolute right-3 top-2 rounded-[4px] px-2 py-0.5 font-mono text-[10px] font-bold text-[#101211]"
-                      style={{ backgroundColor: card.tint }}
-                    >
-                      {card.change}
-                    </div>
-
-                    <div className="relative flex min-h-[42px] items-center gap-3 px-4 py-2.5">
-                      <img
-                        src={card.image}
-                        alt=""
-                        className={`h-12 w-12 shrink-0 origin-left rounded-[4px] object-cover transition-transform duration-200 ${
-                          isActive ? "scale-100" : "scale-[0.58]"
-                        }`}
-                      />
-
-                      <div className="min-w-0 flex-1 pr-20">
-                        <div className="mb-1 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
-                          <span>{card.symbol}</span>
-                          <span className="h-1 w-1 rounded-full" style={{ backgroundColor: card.tint }} />
-                          <span>{card.sub}</span>
-                        </div>
-
-                        <h3
-                          className={`truncate font-bold leading-tight tracking-normal text-white transition-all duration-300 ${
-                            isActive ? "text-lg" : "text-sm"
-                          }`}
-                        >
-                          {card.name}
-                        </h3>
-
-                        <div
-                          aria-hidden={!isActive}
-                          className={`transition-[opacity,transform] duration-180 ${
-                            isActive
-                              ? "relative mt-1.5 translate-y-0 opacity-100"
-                              : "pointer-events-none absolute left-0 right-20 top-full -translate-y-1 opacity-0"
-                          }`}
-                        >
-                          <p className="max-w-[460px] truncate text-xs text-white/66">{card.desc}</p>
-                          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                            <span className="rounded-full border border-white/25 bg-white/12 px-3.5 py-1 text-xs font-semibold text-white/78">
-                              Click to expand
-                            </span>
-                            {card.tags.map((tag) => (
-                              <span
-                                key={tag}
-                                className="rounded-full border border-white/12 bg-white/8 px-2.5 py-0.5 text-[10px] text-white/72"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
+                    <CardFace card={card} state={renderState} />
+                  </motion.article>
                 );
               })}
             </div>
@@ -878,17 +1126,21 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
               key={detailOverlay.card.symbol}
               card={detailOverlay.card}
               detail={detailCache[detailOverlay.card.symbol] ?? fallbackDetail(detailOverlay.card)}
-              fromRect={detailOverlay.fromRect}
-              targetRect={detailOverlay.targetRect}
-              fromTilt={detailOverlay.fromTilt}
-              fromRoll={detailOverlay.fromRoll}
-              heavyReady={detailHeavyReady}
-              onClose={closeDetailOverlay}
-              onWheel={handleDetailWheel}
-              onTouchStart={handleDetailTouchStart}
-              onTouchMove={handleDetailTouchMove}
-            />
-          )}
+            fromRect={detailOverlay.fromRect}
+            targetRect={detailOverlay.targetRect}
+            closeRect={detailOverlay.closeRect}
+            fromVisual={detailOverlay.fromVisual}
+            closeVisual={detailOverlay.closeVisual}
+            phase={detailOverlay.phase}
+            heavyReady={detailHeavyReady}
+            onOpenComplete={finishDetailOpen}
+            onClose={closeDetailOverlay}
+            onCloseComplete={finishDetailClose}
+            onWheel={handleDetailWheel}
+            onTouchStart={handleDetailTouchStart}
+            onTouchMove={handleDetailTouchMove}
+          />
+        )}
         </AnimatePresence>
       </div>
     </section>
@@ -900,10 +1152,14 @@ function CompanyDetailOverlay({
   detail,
   fromRect,
   targetRect,
-  fromTilt,
-  fromRoll,
+  closeRect,
+  fromVisual,
+  closeVisual,
+  phase,
   heavyReady,
+  onOpenComplete,
   onClose,
+  onCloseComplete,
   onWheel,
   onTouchStart,
   onTouchMove,
@@ -912,10 +1168,14 @@ function CompanyDetailOverlay({
   detail: CompanyDetailPayload;
   fromRect: OverlayRect;
   targetRect: OverlayRect;
-  fromTilt: number;
-  fromRoll: number;
+  closeRect?: OverlayRect;
+  fromVisual: CardVisualState;
+  closeVisual?: CardVisualState;
+  phase: DetailOverlayState["phase"];
   heavyReady: boolean;
+  onOpenComplete: (symbol: string) => void;
   onClose: () => void;
+  onCloseComplete: () => void;
   onWheel: (event: ReactWheelEvent<HTMLDivElement>) => void;
   onTouchStart: (event: ReactTouchEvent<HTMLDivElement>) => void;
   onTouchMove: (event: ReactTouchEvent<HTMLDivElement>) => void;
@@ -925,140 +1185,289 @@ function CompanyDetailOverlay({
   const latestIncome = detail.latestIncome;
   const incomeData = detail.incomeData ?? [];
 
-  const cardFaceControls = useAnimationControls();
-  const panelControls = useAnimationControls();
-  const contentControls = useAnimationControls();
+  const returnRect = closeRect ?? fromRect;
+  const stackVisual = closeVisual ?? fromVisual;
+  const detailVisual: CardVisualState = {
+    ...fromVisual,
+    y: 0,
+    z: 0,
+    width: targetRect.width,
+    height: Math.min(132, Math.max(108, targetRect.height * 0.26)),
+    scaleX: 1,
+    tilt: 0,
+    roll: 0,
+    zIndex: 300,
+    opacity: 1,
+    radius: 12,
+    borderWidth: 1,
+    borderOpacity: 0.08,
+    shadowStrength: 1.06,
+    imageScale: 1,
+    compactTitleOpacity: 0,
+    detailTitleOpacity: 1,
+    metaOpacity: 0.45,
+    descriptionOpacity: 1,
+    hintOpacity: 0,
+  };
+  const headerTargetHeight = Math.min(132, Math.max(108, targetRect.height * 0.26));
+  const progress = useMotionValue(0);
+  const stackReentryProgress = useTransform(progress, (value) =>
+    phase === "closing" ? smoothstep((0.58 - value) / 0.4) : 0,
+  );
+  const x = useTransform(progress, (value) => {
+    const start = phase === "closing" ? returnRect.left - targetRect.left : fromRect.left - targetRect.left;
+    return start * (1 - value);
+  });
+  const y = useTransform(progress, (value) => {
+    const start = phase === "closing" ? returnRect.top - targetRect.top : fromRect.top - targetRect.top;
+    return start * (1 - value);
+  });
+  const surfaceWidth = useTransform(progress, (value) => {
+    const start = phase === "closing" ? returnRect.width : fromRect.width;
+    return start + (targetRect.width - start) * value;
+  });
+  const headerHeight = useTransform(progress, (value) => {
+    if (phase === "closing") {
+      const reentry = smoothstep((0.58 - value) / 0.4);
+      return mix(stackVisual.height, detailVisual.height, 1 - reentry);
+    }
+    return mix(fromVisual.height, detailVisual.height, value);
+  });
+  const rotateX = useTransform(progress, (value) => {
+    if (phase === "closing") {
+      const reentry = smoothstep((0.58 - value) / 0.4);
+      return mix(0, stackVisual.tilt, reentry);
+    }
+    return mix(fromVisual.tilt, 0, value);
+  });
+  const rotateZ = useTransform(progress, (value) => {
+    if (phase === "closing") {
+      const reentry = smoothstep((0.58 - value) / 0.4);
+      return mix(0, stackVisual.roll, reentry);
+    }
+    return mix(fromVisual.roll, 0, value);
+  });
+  const borderRadius = useTransform(progress, (value) => {
+    if (phase === "closing") {
+      const reentry = smoothstep((0.58 - value) / 0.4);
+      return mix(detailVisual.radius, stackVisual.radius, reentry);
+    }
+    return mix(fromVisual.radius, detailVisual.radius, value);
+  });
+  const sheetReveal = useTransform(progress, [0, 0.34, 1], [0, 0, 1]);
+  const sheetClipPath = useTransform(sheetReveal, (value) => `inset(0 0 ${Math.max(0, 100 - value * 100)}% 0)`);
+  const sheetOpacity = useTransform(progress, (value) => {
+    if (phase === "closing") return clamp((value - 0.18) / 0.42);
+    if (value < 0.26) return 0;
+    return clamp((value - 0.26) / 0.24) * 0.82 + clamp((value - 0.5) / 0.5) * 0.18;
+  });
+  const detailContentOpacity = useTransform(progress, (value) => {
+    if (phase === "closing") return clamp((value - 0.28) / 0.34);
+    if (value < 0.42) return 0;
+    return clamp((value - 0.42) / 0.3) * 0.78 + clamp((value - 0.72) / 0.28) * 0.22;
+  });
+  const detailContentY = useTransform(progress, (value) => {
+    if (phase === "closing") return mix(7, 0, clamp((value - 0.24) / 0.5));
+    return mix(8, 0, value);
+  });
+  const headerImageScale = useTransform(progress, (value) => {
+    if (phase === "closing") {
+      const reentry = smoothstep((0.58 - value) / 0.4);
+      return mix(detailVisual.imageScale, stackVisual.imageScale, reentry);
+    }
+    return mix(fromVisual.imageScale, detailVisual.imageScale, value);
+  });
+  const compactTitleOpacity = useTransform(progress, (value) => {
+    if (phase === "closing") {
+      const reentry = smoothstep((0.58 - value) / 0.4);
+      return mix(detailVisual.compactTitleOpacity, stackVisual.compactTitleOpacity, reentry);
+    }
+    return mix(fromVisual.compactTitleOpacity, detailVisual.compactTitleOpacity, value);
+  });
+  const detailTitleOpacity = useTransform(progress, (value) => {
+    if (phase === "closing") {
+      const reentry = smoothstep((0.58 - value) / 0.4);
+      return mix(detailVisual.detailTitleOpacity, stackVisual.detailTitleOpacity, reentry);
+    }
+    return mix(fromVisual.detailTitleOpacity, detailVisual.detailTitleOpacity, value);
+  });
+  const headerMetaOpacity = useTransform(progress, (value) => {
+    if (phase === "closing") {
+      const reentry = smoothstep((0.58 - value) / 0.4);
+      return mix(detailVisual.metaOpacity, stackVisual.metaOpacity, reentry);
+    }
+    return mix(fromVisual.metaOpacity, detailVisual.metaOpacity, value);
+  });
+  const headerDescriptionOpacity = useTransform(progress, (value) => {
+    if (phase === "closing") {
+      const reentry = smoothstep((0.58 - value) / 0.4);
+      return mix(detailVisual.descriptionOpacity, stackVisual.descriptionOpacity, reentry);
+    }
+    return mix(fromVisual.descriptionOpacity, detailVisual.descriptionOpacity, value);
+  });
+  const headerDescriptionY = useTransform(stackReentryProgress, (value) => mix(0, stackVisual.descriptionOpacity > 0 ? 0 : -4, value));
+  const hintOpacity = useTransform(progress, (value) => {
+    if (phase === "closing") {
+      const reentry = smoothstep((0.58 - value) / 0.4);
+      return mix(detailVisual.hintOpacity, stackVisual.hintOpacity, reentry);
+    }
+    return mix(fromVisual.hintOpacity, detailVisual.hintOpacity, value);
+  });
+  const borderWidth = useTransform(progress, (value) => {
+    if (phase === "closing") {
+      const reentry = smoothstep((0.58 - value) / 0.4);
+      return mix(detailVisual.borderWidth, stackVisual.borderWidth, reentry);
+    }
+    return mix(fromVisual.borderWidth, detailVisual.borderWidth, value);
+  });
+  const borderColor = useTransform(progress, (value) => {
+    if (phase === "closing") {
+      const reentry = smoothstep((0.58 - value) / 0.4);
+      return `rgba(255,255,255,${mix(detailVisual.borderOpacity, stackVisual.borderOpacity, reentry)})`;
+    }
+    return `rgba(255,255,255,${mix(fromVisual.borderOpacity, detailVisual.borderOpacity, value)})`;
+  });
+  const cardShadow = useTransform(progress, (value) => {
+    const shadowStrength = phase === "closing"
+      ? mix(detailVisual.shadowStrength, stackVisual.shadowStrength, smoothstep((0.58 - value) / 0.4))
+      : mix(fromVisual.shadowStrength, detailVisual.shadowStrength, value);
 
-  // FLIP: 元素固定在最终位置，用 transform 偏移到初始位置，再动画归零
-  const deltaX = fromRect.left + fromRect.width / 2 - (targetRect.left + targetRect.width / 2);
-  const deltaY = fromRect.top + fromRect.height / 2 - (targetRect.top + targetRect.height / 2);
-  const scaleX = fromRect.width / targetRect.width;
-  const scaleY = fromRect.height / targetRect.height;
+    return `0 ${18 * shadowStrength}px ${46 * shadowStrength}px rgba(0,0,0,0.36), 0 1px 0 rgba(255,255,255,0.14) inset`;
+  });
+  const overlayZIndex = useTransform(progress, (value) => {
+    if (phase !== "closing") return 300;
+    const reentry = smoothstep((0.28 - value) / 0.18);
+    return Math.round(mix(300, stackVisual.zIndex, reentry));
+  });
+  const faceState: CardFaceRenderState = {
+    height: headerHeight,
+    radius: borderRadius,
+    borderWidth,
+    borderColor,
+    boxShadow: cardShadow,
+    imageScale: headerImageScale,
+    compactTitleOpacity,
+    detailTitleOpacity,
+    metaOpacity: headerMetaOpacity,
+    descriptionOpacity: headerDescriptionOpacity,
+    descriptionY: headerDescriptionY,
+    hintOpacity,
+  };
 
-  // 单 spring 直接展开：从卡片原位自然放大到最终位置
+  const finishCloseAtStack = useCallback(() => {
+    const realCard = document.querySelector<HTMLElement>(`article[data-card-symbol="${CSS.escape(card.symbol)}"]`);
+    if (realCard) {
+      const realRect = realCard.getBoundingClientRect();
+      x.set(realRect.left - targetRect.left);
+      y.set(realRect.top - targetRect.top);
+      surfaceWidth.set(realRect.width);
+      headerHeight.set(realRect.height);
+      rotateX.set(stackVisual.tilt);
+      rotateZ.set(stackVisual.roll);
+    }
+    onCloseComplete();
+  }, [card.symbol, headerHeight, onCloseComplete, rotateX, rotateZ, stackVisual.roll, stackVisual.tilt, surfaceWidth, targetRect.left, targetRect.top, x, y]);
+
+  // One foreground surface owns the shared-card motion from stack to detail and back.
   useEffect(() => {
-    // 白板先淡入（盖住黑卡），用较长时间避免闪烁
-    const panelTimer = setTimeout(() => {
-      panelControls.start({ opacity: 1, transition: { duration: 0.38, ease: "easeOut" } });
-    }, 100);
-    // 黑卡延迟淡出 — 等白板大部分可见后再消失，避免中间态露底
-    const cardFaceTimer = setTimeout(() => {
-      cardFaceControls.start({ opacity: 0, transition: { duration: 0.18 } });
-    }, 300);
-    // 内容淡入 — 等面板完全可见
-    const contentTimer = setTimeout(() => {
-      contentControls.start({ opacity: 1, y: 0, transition: SPRING_TRANSITION });
-    }, 320);
+    if (phase !== "opening") return;
+
+    const controls = animate(progress, 1, DETAIL_SURFACE_OPEN_TRANSITION);
+    void controls.then(() => onOpenComplete(card.symbol));
+
+
+
     return () => {
-      clearTimeout(panelTimer);
-      clearTimeout(cardFaceTimer);
-      clearTimeout(contentTimer);
+      controls.stop();
     };
-  }, []);
+  }, [phase, card.symbol, onOpenComplete, progress]);
+
+  useEffect(() => {
+    if (phase !== "closing") return;
+    if (!closeRect) return;
+    let didFinish = false;
+
+    const controls = animate(progress, 0, DETAIL_SURFACE_CLOSE_TRANSITION);
+
+    void controls.then(() => {
+      if (didFinish) return;
+      didFinish = true;
+      finishCloseAtStack();
+    });
+
+    return () => {
+      controls.stop();
+    };
+  }, [
+    phase,
+    closeRect,
+    finishCloseAtStack,
+    progress,
+  ]);
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[300]">
+    <motion.div className="pointer-events-none fixed inset-0" style={{ zIndex: overlayZIndex }}>
       <motion.article
-        className="pointer-events-auto fixed overflow-hidden text-[#20231d]"
+        layoutId={`card-${card.symbol}`}
+        data-detail-phase={phase}
+        className="pointer-events-auto fixed text-[#20231d]"
         style={{
           left: targetRect.left,
           top: targetRect.top,
-          width: targetRect.width,
+          width: surfaceWidth,
           height: targetRect.height,
-          borderRadius: 12,
-          transformOrigin: "50% 50%",
-          willChange: "transform",
-        }}
-        initial={{
-          x: deltaX,
-          y: deltaY,
-          scaleX,
-          scaleY,
-          rotateX: fromTilt,
-          rotateZ: fromRoll,
-          borderRadius: 7,
-        }}
-        animate={{
-          x: 0,
-          y: 0,
-          scaleX: 1,
-          scaleY: 1,
-          rotateX: 0,
-          rotateZ: 0,
-          borderRadius: 12,
-          transition: SPRING_TRANSITION,
-        }}
-        exit={{
-          x: deltaX,
-          y: deltaY,
-          scaleX,
-          scaleY,
-          rotateX: fromTilt,
-          rotateZ: fromRoll,
-          borderRadius: 7,
-          opacity: 0,
-          transition: SPRING_TRANSITION,
+          x,
+          y,
+          rotateX,
+          rotateZ,
+          borderRadius,
+          transformOrigin: "0 0",
+          willChange: "transform, width",
         }}
       >
-        {/* 卡片面 — 初始可见，展开后淡出 */}
-        <motion.div
-          className="absolute inset-0 border border-white/8 text-white"
+        {/* Card header: the selected record remains the physical top of the detail sheet. */}
+        <CardFace
+          card={card}
+          state={faceState}
+          className="z-30"
           style={{
-            borderRadius: "inherit",
-            backgroundImage: `linear-gradient(90deg, rgba(4,5,5,0.97) 0%, rgba(8,9,10,0.88) 46%, rgba(10,12,12,0.74) 100%), url(${card.image})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            boxShadow: "0 18px 46px rgba(0,0,0,0.36), 0 1px 0 rgba(255,255,255,0.14) inset",
+            borderTopLeftRadius: borderRadius,
+            borderTopRightRadius: borderRadius,
+            borderBottomLeftRadius: 7,
+            borderBottomRightRadius: 7,
           }}
-          initial={{ opacity: 1 }}
-          animate={cardFaceControls}
-          exit={{ opacity: 1, transition: { duration: 0.15 } }}
-        >
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0)_42%,rgba(0,0,0,0.2))]" />
-          <div className="absolute right-3 top-2 rounded-[4px] px-2 py-0.5 font-mono text-[10px] font-bold text-[#101211]" style={{ backgroundColor: card.tint }}>
-            {card.change}
-          </div>
-          <div className="relative flex min-h-[42px] items-center gap-3 px-4 py-2.5">
-            <img src={card.image} alt="" className="h-12 w-12 shrink-0 rounded-[4px] object-cover" />
-            <div className="min-w-0 flex-1 pr-20">
-              <div className="mb-1 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
-                <span>{card.symbol}</span>
-                <span className="h-1 w-1 rounded-full" style={{ backgroundColor: card.tint }} />
-                <span>{card.sub}</span>
-              </div>
-              <h3 className="truncate text-lg font-bold leading-tight text-white">{card.name}</h3>
-              <p className="mt-1.5 max-w-[460px] truncate text-xs text-white/66">{card.desc}</p>
-            </div>
-          </div>
-        </motion.div>
+        />
 
-        {/* 详情面板背景 */}
         <motion.div
-          className="absolute inset-0 z-10 border border-[#d7d8cd] bg-[#f8f7f2]"
+          className="relative z-20 -mt-[1px] overflow-hidden border border-[#d7d8cd] bg-[#f8f7f2]"
           style={{
-            borderRadius: "inherit",
+            height: targetRect.height - headerTargetHeight,
+            borderTopLeftRadius: 0,
+            borderTopRightRadius: 0,
+            borderBottomLeftRadius: borderRadius,
+            borderBottomRightRadius: borderRadius,
             boxShadow: "0 24px 70px rgba(36,39,30,0.24), 0 1px 0 rgba(255,255,255,0.7) inset",
+            opacity: sheetOpacity,
+            clipPath: sheetClipPath,
+            transformOrigin: "50% 0%",
+            willChange: "clip-path, opacity",
           }}
-          initial={{ opacity: 0 }}
-          animate={panelControls}
-          exit={{ opacity: 0, transition: { duration: 0.12 } }}
         >
           <div className="absolute inset-x-0 top-0 h-40 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0))]" />
           <div className="absolute inset-y-0 left-0 w-10 bg-[linear-gradient(90deg,rgba(152,163,111,0.16),rgba(152,163,111,0))]" />
           <div className="absolute inset-y-0 right-0 w-10 bg-[linear-gradient(270deg,rgba(246,83,112,0.12),rgba(246,83,112,0))]" />
-        </motion.div>
 
-        {/* 详情内容 — 延迟渐入 */}
-        <motion.div
-          data-detail-scroll
-          className="relative z-20 h-full touch-pan-y overflow-y-auto overscroll-contain"
-          initial={{ opacity: 0, y: 16 }}
-          animate={contentControls}
-          exit={{ opacity: 0, y: 8, transition: { duration: 0.12 } }}
-          onWheel={onWheel}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-        >
+          <motion.div
+            data-detail-scroll
+            className="relative z-20 h-full touch-pan-y overflow-y-auto overscroll-contain"
+            style={{
+              opacity: detailContentOpacity,
+              y: detailContentY,
+            }}
+            onWheel={onWheel}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+          >
           <header className="px-8 pb-5 pt-7 text-center">
             <div className="mb-4 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-[#62645d]">
               <span>Stock Insight Archive</span>
@@ -1113,9 +1522,10 @@ function CompanyDetailOverlay({
               <FinancialChartPlaceholder />
             )}
           </section>
+          </motion.div>
         </motion.div>
       </motion.article>
-    </div>
+    </motion.div>
   );
 }
 
