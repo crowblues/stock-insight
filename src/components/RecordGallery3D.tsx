@@ -1031,19 +1031,25 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                     }}
                   >
                     <CardFace card={card} state={renderState} />
-                    {isExpanded && (
-                      <InlineDetailContent
-                        card={card}
-                        detail={cardDetail}
-                        profile={cardProfile}
-                        heavyReady={detailHeavyReady}
-                        headerHeight={Math.min(132, Math.max(108, expandH * 0.26))}
-                        totalHeight={expandH}
-                        onClose={closeDetailOverlay}
-                        onWheel={handleDetailWheel}
-                        onTouchStart={handleDetailTouchStart}
-                        onTouchMove={handleDetailTouchMove}
-                      />
+                    {isExpandedOrClosing && (
+                      <motion.div
+                        initial={false}
+                        animate={{ opacity: isExpanded ? 1 : 0 }}
+                        transition={isClosing ? { type: "tween", duration: 0.38, ease: [0.4, 0, 0.2, 1] } : { duration: 0 }}
+                      >
+                        <InlineDetailContent
+                          card={card}
+                          detail={cardDetail}
+                          profile={cardProfile}
+                          heavyReady={detailHeavyReady}
+                          headerHeight={Math.min(132, Math.max(108, expandH * 0.26))}
+                          totalHeight={expandH}
+                          onClose={closeDetailOverlay}
+                          onWheel={handleDetailWheel}
+                          onTouchStart={handleDetailTouchStart}
+                          onTouchMove={handleDetailTouchMove}
+                        />
+                      </motion.div>
                     )}
                   </motion.div>
                 );
