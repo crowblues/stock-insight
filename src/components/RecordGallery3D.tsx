@@ -660,10 +660,10 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     const isActive = item.index === activeIndex;
     const hitSlot = Math.max(0, Math.min(VISIBLE_COUNT - 1, Math.round(item.motionSlot)));
     const isFrontCard = hitSlot === VISIBLE_COUNT - 1;
-    const yOffset = isActive ? (isFrontCard ? 12 : 8) : isFrontCard ? 26 : 4 + HIT_Y_OFFSET_BY_SLOT[hitSlot];
+    const yOffset = isActive ? (isFrontCard ? 2 : 0) : isFrontCard ? 26 : 4 + HIT_Y_OFFSET_BY_SLOT[hitSlot];
     const centerY = item.y + yOffset;
-    const width = isActive ? Math.min(520, Math.max(300, item.width + 86)) : Math.max(174, item.width + (isFrontCard ? 42 : -44));
-    const height = isActive ? Math.max(74, item.height - 10) : isFrontCard ? 62 : HIT_HEIGHT_BY_SLOT[hitSlot];
+    const width = isActive ? Math.min(540, Math.max(320, item.width + 100)) : Math.max(174, item.width + (isFrontCard ? 42 : -44));
+    const height = isActive ? Math.max(90, item.height + 4) : isFrontCard ? 62 : HIT_HEIGHT_BY_SLOT[hitSlot];
     const xOffset = 0;
 
     return {
@@ -938,27 +938,40 @@ function CompanyDetailOverlay({
           boxShadow: "0 18px 46px rgba(0,0,0,0.36)",
         }}
         animate={{
-          left: targetRect.left,
-          top: targetRect.top,
-          width: targetRect.width,
-          height: targetRect.height,
-          borderRadius: 12,
-          rotateX: 0,
-          rotateZ: 0,
-          boxShadow: "0 24px 70px rgba(36,39,30,0.24)",
+          left: [fromRect.left - 6, targetRect.left],
+          top: [fromRect.top - 32, targetRect.top],
+          width: [fromRect.width * 1.08, targetRect.width],
+          height: [fromRect.height * 1.08, targetRect.height],
+          borderRadius: [7, 12],
+          rotateX: [fromTilt * 1.5, 0],
+          rotateZ: [fromRoll * 0.4, 0],
+          boxShadow: [
+            "0 40px 80px rgba(0,0,0,0.55)",
+            "0 24px 70px rgba(36,39,30,0.24)",
+          ],
         }}
         exit={{
-          left: fromRect.left,
-          top: fromRect.top,
-          width: fromRect.width,
-          height: fromRect.height,
-          borderRadius: 7,
-          rotateX: fromTilt,
-          rotateZ: fromRoll,
-          boxShadow: "0 18px 46px rgba(0,0,0,0.36)",
-          opacity: 0,
+          left: [fromRect.left - 6, fromRect.left],
+          top: [fromRect.top - 32, fromRect.top],
+          width: [fromRect.width * 1.08, fromRect.width],
+          height: [fromRect.height * 1.08, fromRect.height],
+          borderRadius: [7, 7],
+          rotateX: [fromTilt * 1.5, fromTilt],
+          rotateZ: [fromRoll * 0.4, fromRoll],
+          boxShadow: [
+            "0 40px 80px rgba(0,0,0,0.55)",
+            "0 18px 46px rgba(0,0,0,0.36)",
+          ],
+          opacity: [1, 0],
         }}
-        transition={SPRING_TRANSITION}
+        transition={{
+          duration: 0.68,
+          times: [0.3, 1],
+          ease: [
+            [0.33, 1, 0.68, 1],
+            [0.65, 0, 0.35, 1],
+          ],
+        }}
       >
         {/* 卡片面 — 初始可见，展开后淡出 */}
         <motion.div
