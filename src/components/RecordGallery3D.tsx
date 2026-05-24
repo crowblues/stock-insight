@@ -1,15 +1,13 @@
 "use client";
 
-import gsap from "gsap";
+import { motion, AnimatePresence } from "motion/react";
 import {
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
-  type RefObject,
   type TouchEvent as ReactTouchEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
@@ -245,7 +243,13 @@ type DetailOverlayState = {
   targetRect: OverlayRect;
   fromTilt: number;
   fromRoll: number;
-  phase: "opening" | "open" | "closing";
+};
+
+const SPRING_TRANSITION = {
+  type: "spring" as const,
+  stiffness: 120,
+  damping: 18,
+  mass: 1.1,
 };
 
 const toOverlayRect = (rect: DOMRect): OverlayRect => ({
@@ -352,19 +356,10 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   const [detailOverlay, setDetailOverlay] = useState<DetailOverlayState | null>(null);
   const [detailCache, setDetailCache] = useState<Record<string, CompanyDetailPayload>>({});
   const [detailHeavyReadySymbol, setDetailHeavyReadySymbol] = useState<string | null>(null);
-  const [isClosingHandoff, setIsClosingHandoff] = useState(false);
-  const [closingSymbol, setClosingSymbol] = useState<string | null>(null);
-  const [restoringSymbol, setRestoringSymbol] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const cardRefs = useRef(new Map<string, HTMLElement>());
-  const detailArticleRef = useRef<HTMLElement | null>(null);
-  const detailContentRef = useRef<HTMLDivElement | null>(null);
-  const detailPanelRef = useRef<HTMLDivElement | null>(null);
-  const detailCardFaceRef = useRef<HTMLDivElement | null>(null);
   const detailCacheRef = useRef(new Map<string, CompanyDetailPayload>());
-  const detailOverlayRef = useRef<DetailOverlayState | null>(null);
-  const detailTimelineRef = useRef<gsap.core.Timeline | null>(null);
-  const detailClosingRef = useRef(false);
+  const detailOpenRef = useRef(false);
   const scrollPositionRef = useRef(0);
   const scrollFrameRef = useRef<number | null>(null);
   const pendingScrollPositionRef = useRef(0);
@@ -478,115 +473,16 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
       targetRect: getDetailTargetRect(),
       fromTilt: layoutItem?.tilt ?? -16,
       fromRoll: layoutItem?.roll ?? 0,
-      phase: "opening",
     });
   };
 
   const closeDetailOverlay = () => {
-    const current = detailOverlayRef.current;
-    const article = detailArticleRef.current;
-    const cardFace = detailCardFaceRef.current;
-    const content = detailContentRef.current;
-    const panel = detailPanelRef.current;
-
-    if (!current || !article || !content || !cardFace || !panel || detailClosingRef.current) return;
-
-    detailClosingRef.current = true;
-    detailTimelineRef.current?.kill();
-    const articleRect = toOverlayRect(article.getBoundingClientRect());
-
-    setDetailOverlay({ ...current, phase: "closing" });
-    setIsClosingHandoff(true);
-    setClosingSymbol(current.card.symbol);
+    setDetailOverlay(null);
+    setDetailHeavyReadySymbol(null);
     setIsRouting(false);
     setActiveIndex(null);
     setHoveredIndex(null);
-
-    const stackCard = cardRefs.current.get(current.card.symbol);
-    const targetRect = stackCard ? toOverlayRect(stackCard.getBoundingClientRect()) : current.fromRect;
-    const closeTransform = {
-      x: targetRect.left + targetRect.width / 2 - (articleRect.left + articleRect.width / 2),
-      y: targetRect.top + targetRect.height / 2 - (articleRect.top + articleRect.height / 2),
-      scaleX: targetRect.width / articleRect.width,
-      scaleY: targetRect.height / articleRect.height,
-    };
-
-    const finishClose = () => {
-      // Phase 1: 让卡片在 overlay 下方先显现（isRestoringCard=true 绕过 isExpandedClone 隐藏）
-      detailTimelineRef.current = null;
-      detailClosingRef.current = false;
-      setIsClosingHandoff(false);
-      setClosingSymbol(null);
-      setRestoringSymbol(current.card.symbol);
-
-      // Phase 2: 等卡片绘制完成后再移除 overlay，消除视觉断层
-      requestAnimationFrame(() => {
-        detailArticleRef.current = null;
-        detailContentRef.current = null;
-        detailPanelRef.current = null;
-        detailCardFaceRef.current = null;
-        setDetailHeavyReadySymbol(null);
-        setDetailOverlay(null);
-        activeSinceRef.current = performance.now();
-      });
-    };
-
-    const timeline = gsap.timeline({
-      defaults: { overwrite: true },
-      onComplete: finishClose,
-      onInterrupt: () => {
-        detailClosingRef.current = false;
-      },
-    });
-    detailTimelineRef.current = timeline;
-    gsap.set(article, {
-      backgroundColor: "transparent",
-      boxShadow: "0 24px 70px rgba(36,39,30,0.24)",
-      transformOrigin: "50% 50%",
-      willChange: "transform",
-      force3D: true,
-    });
-
-    timeline
-      // === 反向三阶段"收纳"动画 ===
-
-      // 阶段1: 内容撤退 — 详情内容消失，露出卡片面(0-0.16s)
-      .to(content, { autoAlpha: 0, y: 8, duration: 0.12, ease: "power2.in" }, 0)
-      .to(panel, { autoAlpha: 0, duration: 0.14, ease: "power2.in" }, 0.02)
-      .to(cardFace, { autoAlpha: 1, duration: 0.18, ease: "power2.out" }, 0.06)
-
-      // 阶段2: 压缩 — 缩小成浮动卡片，悬停在栈上方(0.14-0.42s)
-      .to(article, {
-        x: closeTransform.x * 0.82,
-        y: closeTransform.y + 18,
-        scaleX: closeTransform.scaleX * 1.06,
-        scaleY: closeTransform.scaleY * 1.06,
-        rotateX: current.fromTilt * 0.35,
-        rotateZ: current.fromRoll * 0.3,
-        borderRadius: 7,
-        boxShadow: "0 36px 72px rgba(0,0,0,0.5)",
-        transformPerspective: 560,
-        duration: 0.28,
-        ease: "power2.inOut",
-        force3D: true,
-      }, 0.14)
-
-      // 阶段3: 插入 — 滑回卡堆位置(0.40-0.58s)
-      .to(article, {
-        x: closeTransform.x,
-        y: closeTransform.y,
-        scaleX: closeTransform.scaleX,
-        scaleY: closeTransform.scaleY,
-        rotateX: current.fromTilt,
-        rotateZ: current.fromRoll,
-        boxShadow: "0 18px 46px rgba(0,0,0,0.36)",
-        duration: 0.18,
-        ease: "power2.in",
-        force3D: true,
-      }, 0.40)
-
-      // 末尾交叉淡出：overlay 渐隐，卡片已在下方显现
-      .to(article, { autoAlpha: 0, duration: 0.1, ease: "power2.in" }, ">-0.1");
+    activeSinceRef.current = performance.now();
   };
 
   const handleDetailWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
@@ -602,27 +498,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   };
 
   useEffect(() => {
-    detailOverlayRef.current = detailOverlay;
-  }, [detailOverlay]);
-
-  useEffect(() => {
-    if (!restoringSymbol) return;
-
-    let secondFrame = 0;
-    const firstFrame = window.requestAnimationFrame(() => {
-      secondFrame = window.requestAnimationFrame(() => {
-        setRestoringSymbol(null);
-      });
-    });
-
-    return () => {
-      window.cancelAnimationFrame(firstFrame);
-      if (secondFrame) window.cancelAnimationFrame(secondFrame);
-    };
-  }, [restoringSymbol]);
-
-  useEffect(() => {
-    if (detailOverlay?.phase !== "open") return;
+    if (!detailOverlay) return;
 
     const timer = window.setTimeout(() => {
       setDetailHeavyReadySymbol(detailOverlay.card.symbol);
@@ -631,101 +507,12 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     return () => {
       window.clearTimeout(timer);
     };
-  }, [detailOverlay?.phase, detailOverlay?.card.symbol]);
+  }, [detailOverlay?.card.symbol]);
 
-  const detailHeavyReady = detailOverlay?.phase !== "opening" && detailHeavyReadySymbol === detailOverlay?.card.symbol;
+  const detailHeavyReady = detailHeavyReadySymbol === detailOverlay?.card.symbol;
 
-  useLayoutEffect(() => {
-    if (!detailOverlay || detailOverlay.phase !== "opening") return;
-
-    const article = detailArticleRef.current;
-    const content = detailContentRef.current;
-    const cardFace = detailCardFaceRef.current;
-    const panel = detailPanelRef.current;
-    if (!article || !content || !cardFace || !panel) return;
-
-    detailTimelineRef.current?.kill();
-
-    const fromTransform = {
-      x: detailOverlay.fromRect.left + detailOverlay.fromRect.width / 2 - (detailOverlay.targetRect.left + detailOverlay.targetRect.width / 2),
-      y: detailOverlay.fromRect.top + detailOverlay.fromRect.height / 2 - (detailOverlay.targetRect.top + detailOverlay.targetRect.height / 2),
-      scaleX: detailOverlay.fromRect.width / detailOverlay.targetRect.width,
-      scaleY: detailOverlay.fromRect.height / detailOverlay.targetRect.height,
-    };
-
-    gsap.set(article, {
-      left: detailOverlay.targetRect.left,
-      top: detailOverlay.targetRect.top,
-      width: detailOverlay.targetRect.width,
-      height: detailOverlay.targetRect.height,
-      x: fromTransform.x,
-      y: fromTransform.y,
-      scaleX: fromTransform.scaleX,
-      scaleY: fromTransform.scaleY,
-      borderRadius: 7,
-      backgroundColor: "transparent",
-      rotateX: detailOverlay.fromTilt,
-      rotateZ: detailOverlay.fromRoll,
-      transformPerspective: 560,
-      boxShadow: "0 18px 46px rgba(0,0,0,0.36)",
-      transformOrigin: "50% 50%",
-      willChange: "transform",
-      force3D: true,
-    });
-    gsap.set(content, { autoAlpha: 0, y: 16 });
-    gsap.set(panel, { autoAlpha: 0 });
-    gsap.set(cardFace, { autoAlpha: 1 });
-
-    const timeline = gsap.timeline({
-      defaults: { overwrite: true },
-      onComplete: () => {
-        detailTimelineRef.current = null;
-        setDetailOverlay((current) => (current ? { ...current, phase: "open" } : current));
-      },
-    });
-    detailTimelineRef.current = timeline;
-
-    // === 三阶段"抽卡"动画 ===
-
-    // 阶段1: 抽离 — 卡片从栈里"浮起来"(0-0.22s)
-    timeline.to(article, {
-      x: fromTransform.x * 0.82,
-      y: fromTransform.y - 18,
-      scaleX: fromTransform.scaleX * 1.06,
-      scaleY: fromTransform.scaleY * 1.06,
-      rotateX: detailOverlay.fromTilt * 0.35,
-      rotateZ: detailOverlay.fromRoll * 0.3,
-      boxShadow: "0 36px 72px rgba(0,0,0,0.5)",
-      duration: 0.22,
-      ease: "power2.out",
-      force3D: true,
-    }, 0);
-
-    // 阶段2: 飞行展开 — 浮动实体展开到目标位置(0.22-0.64s)
-    timeline.to(article, {
-      x: 0,
-      y: 0,
-      scaleX: 1,
-      scaleY: 1,
-      rotateX: 0,
-      rotateZ: 0,
-      borderRadius: 12,
-      transformPerspective: 560,
-      boxShadow: "0 24px 70px rgba(36,39,30,0.24)",
-      duration: 0.42,
-      ease: "power2.inOut",
-      force3D: true,
-    }, 0.22);
-
-    // 阶段3: 着陆 — 空间到位后，内容"长出来"(0.5-0.8s)
-    // 关键：cardFace 在空间移动完成后才消失，不是边飞边消
-    timeline.to(cardFace, { autoAlpha: 0, duration: 0.16, ease: "power2.out" }, 0.52);
-    timeline.to(panel, { autoAlpha: 1, duration: 0.2, ease: "power2.out" }, 0.50);
-    timeline.to(content, { autoAlpha: 1, y: 0, duration: 0.28, ease: "power3.out" }, 0.58);
-
-    return () => {
-      timeline.kill();
-    };
+  useEffect(() => {
+    detailOpenRef.current = detailOverlay !== null;
   }, [detailOverlay]);
 
   const warmCompanyDetail = (card: RecordCard) => {
@@ -762,7 +549,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
         clearTimeout(pendingActiveTimerRef.current);
         pendingActiveTimerRef.current = null;
       }
-      if (detailOverlayRef.current) return;
+      if (detailOpenRef.current) return;
       setHoveredIndex(null);
       setActiveIndex(null);
       setIsRouting(false);
@@ -864,7 +651,6 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
       if (pendingActiveTimerRef.current) clearTimeout(pendingActiveTimerRef.current);
       if (detailTimerRef.current) clearTimeout(detailTimerRef.current);
       if (scrollFrameRef.current !== null) window.cancelAnimationFrame(scrollFrameRef.current);
-      detailTimelineRef.current?.kill();
     };
   }, []);
 
@@ -922,30 +708,25 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
           >
             <div className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}>
               {layout.map(({ card, index, motionSlot, opacity, y, z, width, height, tilt, roll }) => {
-                const isClosingCard = isClosingHandoff && closingSymbol === card.symbol;
-                const isRestoringCard = restoringSymbol === card.symbol;
-                const isActive = !isClosingCard && index === activeIndex;
+                const isActive = index === activeIndex;
                 const isHovered = hoveredIndex === index && !isActive && activeIndex === null;
                 const motionDuration = activeIndex !== null || isActive ? ACTIVE_TRANSITION_MS : SCROLL_TRANSITION_MS;
                 const transform = `translate(-50%, -50%) translate3d(0, ${y}px, ${z}px) rotateX(${tilt}deg) rotateZ(${roll}deg) scaleX(${width / 560})`;
-                const isExpandedClone =
-                  detailOverlay?.card.symbol === card.symbol && !isClosingCard;
+                const isExpandedClone = detailOverlay?.card.symbol === card.symbol;
                 const cardStyle: CSSProperties = {
                   left: "50%",
                   top: "50%",
                   zIndex: isActive ? 70 : Math.max(0, Math.round(motionSlot) + 1),
                   width: "min(560px, 72vw)",
                   minHeight: height,
-                  opacity: (isExpandedClone && !isRestoringCard) || isClosingCard ? 0 : opacity,
+                  opacity: isExpandedClone ? 0 : opacity,
                   transform,
                   transformStyle: "preserve-3d",
                   transformOrigin: "50% 50%",
                   willChange: "transform, opacity",
                   backfaceVisibility: "hidden",
                   contain: "layout paint style",
-                  transition: isClosingCard || isRestoringCard
-                    ? "none"
-                    : `transform ${motionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease`,
+                  transition: `transform ${motionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease`,
                   border: isActive
                     ? "1.5px solid rgba(255,255,255,0.8)"
                     : isHovered
@@ -1088,23 +869,24 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
           </div>
         </div>
 
-        {detailOverlay && (
-          <CompanyDetailOverlay
-            card={detailOverlay.card}
-            detail={detailCache[detailOverlay.card.symbol] ?? fallbackDetail(detailOverlay.card)}
-            targetRect={detailOverlay.targetRect}
-            phase={detailOverlay.phase}
-            heavyReady={detailHeavyReady}
-            detailArticleRef={detailArticleRef}
-            detailContentRef={detailContentRef}
-            detailPanelRef={detailPanelRef}
-            detailCardFaceRef={detailCardFaceRef}
-            onClose={closeDetailOverlay}
-            onWheel={handleDetailWheel}
-            onTouchStart={handleDetailTouchStart}
-            onTouchMove={handleDetailTouchMove}
-          />
-        )}
+        <AnimatePresence>
+          {detailOverlay && (
+            <CompanyDetailOverlay
+              key={detailOverlay.card.symbol}
+              card={detailOverlay.card}
+              detail={detailCache[detailOverlay.card.symbol] ?? fallbackDetail(detailOverlay.card)}
+              fromRect={detailOverlay.fromRect}
+              targetRect={detailOverlay.targetRect}
+              fromTilt={detailOverlay.fromTilt}
+              fromRoll={detailOverlay.fromRoll}
+              heavyReady={detailHeavyReady}
+              onClose={closeDetailOverlay}
+              onWheel={handleDetailWheel}
+              onTouchStart={handleDetailTouchStart}
+              onTouchMove={handleDetailTouchMove}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </section>
   );
@@ -1113,13 +895,11 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
 function CompanyDetailOverlay({
   card,
   detail,
+  fromRect,
   targetRect,
-  phase,
+  fromTilt,
+  fromRoll,
   heavyReady,
-  detailArticleRef,
-  detailContentRef,
-  detailPanelRef,
-  detailCardFaceRef,
   onClose,
   onWheel,
   onTouchStart,
@@ -1127,13 +907,11 @@ function CompanyDetailOverlay({
 }: {
   card: RecordCard;
   detail: CompanyDetailPayload;
+  fromRect: OverlayRect;
   targetRect: OverlayRect;
-  phase: DetailOverlayState["phase"];
+  fromTilt: number;
+  fromRoll: number;
   heavyReady: boolean;
-  detailArticleRef: RefObject<HTMLElement | null>;
-  detailContentRef: RefObject<HTMLDivElement | null>;
-  detailPanelRef: RefObject<HTMLDivElement | null>;
-  detailCardFaceRef: RefObject<HTMLDivElement | null>;
   onClose: () => void;
   onWheel: (event: ReactWheelEvent<HTMLDivElement>) => void;
   onTouchStart: (event: ReactTouchEvent<HTMLDivElement>) => void;
@@ -1144,112 +922,102 @@ function CompanyDetailOverlay({
   const latestIncome = detail.latestIncome;
   const incomeData = detail.incomeData ?? [];
 
-  const overlayStyle: CSSProperties = {
-    left: targetRect.left,
-    top: targetRect.top,
-    width: targetRect.width,
-    height: targetRect.height,
-    borderRadius: 7,
-    boxShadow: "0 18px 46px rgba(0,0,0,0.36), 0 1px 0 rgba(255,255,255,0.14) inset",
-    transformOrigin: "0 0",
-    willChange: "transform",
-  };
-
   return (
     <div className="pointer-events-none fixed inset-0 z-[300]">
-      <article
-        ref={(element) => {
-          detailArticleRef.current = element;
-        }}
-        data-detail-phase={phase}
+      <motion.article
         className="pointer-events-auto fixed overflow-hidden text-[#20231d]"
-        style={overlayStyle}
+        style={{ transformOrigin: "50% 50%", willChange: "transform" }}
+        initial={{
+          left: fromRect.left,
+          top: fromRect.top,
+          width: fromRect.width,
+          height: fromRect.height,
+          borderRadius: 7,
+          rotateX: fromTilt,
+          rotateZ: fromRoll,
+          boxShadow: "0 18px 46px rgba(0,0,0,0.36)",
+        }}
+        animate={{
+          left: targetRect.left,
+          top: targetRect.top,
+          width: targetRect.width,
+          height: targetRect.height,
+          borderRadius: 12,
+          rotateX: 0,
+          rotateZ: 0,
+          boxShadow: "0 24px 70px rgba(36,39,30,0.24)",
+        }}
+        exit={{
+          left: fromRect.left,
+          top: fromRect.top,
+          width: fromRect.width,
+          height: fromRect.height,
+          borderRadius: 7,
+          rotateX: fromTilt,
+          rotateZ: fromRoll,
+          boxShadow: "0 18px 46px rgba(0,0,0,0.36)",
+          opacity: 0,
+        }}
+        transition={SPRING_TRANSITION}
       >
-        <div
-          ref={(element) => {
-            detailCardFaceRef.current = element;
-          }}
-          data-detail-card-face
-          className="absolute inset-0 border border-white/8 text-white shadow-[0_18px_46px_rgba(0,0,0,0.36),0_1px_0_rgba(255,255,255,0.14)_inset]"
+        {/* 卡片面 — 初始可见，展开后淡出 */}
+        <motion.div
+          className="absolute inset-0 border border-white/8 text-white"
           style={{
             borderRadius: "inherit",
             backgroundImage: `linear-gradient(90deg, rgba(4,5,5,0.97) 0%, rgba(8,9,10,0.88) 46%, rgba(10,12,12,0.74) 100%), url(${card.image})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
+            boxShadow: "0 18px 46px rgba(0,0,0,0.36), 0 1px 0 rgba(255,255,255,0.14) inset",
           }}
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 0 }}
+          exit={{ opacity: 1 }}
+          transition={{ duration: 0.28, delay: 0.2 }}
         >
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0)_42%,rgba(0,0,0,0.2))]" />
           <div className="absolute right-3 top-2 rounded-[4px] px-2 py-0.5 font-mono text-[10px] font-bold text-[#101211]" style={{ backgroundColor: card.tint }}>
             {card.change}
           </div>
           <div className="relative flex min-h-[42px] items-center gap-3 px-4 py-2.5">
-            <img
-              src={card.image}
-              alt=""
-              className={`h-12 w-12 shrink-0 origin-left rounded-[4px] object-cover transition-transform duration-200 ${
-                phase === "closing" ? "scale-[0.58]" : "scale-100"
-              }`}
-            />
+            <img src={card.image} alt="" className="h-12 w-12 shrink-0 rounded-[4px] object-cover" />
             <div className="min-w-0 flex-1 pr-20">
               <div className="mb-1 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
                 <span>{card.symbol}</span>
                 <span className="h-1 w-1 rounded-full" style={{ backgroundColor: card.tint }} />
                 <span>{card.sub}</span>
               </div>
-              <h3
-                className={`truncate font-bold leading-tight tracking-normal text-white transition-all duration-200 ${
-                  phase === "closing" ? "text-sm" : "text-lg"
-                }`}
-              >
-                {card.name}
-              </h3>
-              <p
-                className={`mt-1.5 max-w-[460px] truncate text-xs text-white/66 transition-[opacity,transform] duration-160 ${
-                  phase === "closing" ? "-translate-y-1 opacity-0" : "translate-y-0 opacity-100"
-                }`}
-              >
-                {card.desc}
-              </p>
-              <div
-                className={`mt-1.5 flex flex-wrap items-center gap-2 transition-[opacity,transform] duration-160 ${
-                  phase === "closing" ? "-translate-y-1 opacity-0" : "translate-y-0 opacity-100"
-                }`}
-              >
-                <span className="rounded-full border border-white/25 bg-white/12 px-3.5 py-1 text-xs font-semibold text-white/78">
-                  Click to expand
-                </span>
-                {card.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-white/12 bg-white/8 px-2.5 py-0.5 text-[10px] text-white/72"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
+              <h3 className="truncate text-lg font-bold leading-tight text-white">{card.name}</h3>
+              <p className="mt-1.5 max-w-[460px] truncate text-xs text-white/66">{card.desc}</p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div
-          ref={(element) => {
-            detailPanelRef.current = element;
+        {/* 详情面板背景 */}
+        <motion.div
+          className="absolute inset-0 z-10 border border-[#d7d8cd] bg-[#f8f7f2]"
+          style={{
+            borderRadius: "inherit",
+            boxShadow: "0 24px 70px rgba(36,39,30,0.24), 0 1px 0 rgba(255,255,255,0.7) inset",
           }}
-          data-detail-panel
-          className="absolute inset-0 z-10 border border-[#d7d8cd] bg-[#f8f7f2] shadow-[0_24px_70px_rgba(36,39,30,0.24),0_1px_0_rgba(255,255,255,0.7)_inset]"
-          aria-hidden="true"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.22, delay: 0.18 }}
         >
           <div className="absolute inset-x-0 top-0 h-40 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0))]" />
           <div className="absolute inset-y-0 left-0 w-10 bg-[linear-gradient(90deg,rgba(152,163,111,0.16),rgba(152,163,111,0))]" />
           <div className="absolute inset-y-0 right-0 w-10 bg-[linear-gradient(270deg,rgba(246,83,112,0.12),rgba(246,83,112,0))]" />
-        </div>
+        </motion.div>
 
-        <div
-          ref={(element) => {
-            detailContentRef.current = element;
-          }}
+        {/* 详情内容 — 延迟渐入 */}
+        <motion.div
           data-detail-scroll
           className="relative z-20 h-full touch-pan-y overflow-y-auto overscroll-contain"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 8 }}
+          transition={{ duration: 0.3, delay: 0.32 }}
           onWheel={onWheel}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
@@ -1265,7 +1033,6 @@ function CompanyDetailOverlay({
                 Back
               </button>
             </div>
-
             <div className="relative mx-auto flex h-40 w-full max-w-[420px] items-center justify-center overflow-hidden bg-[#090a0a] shadow-[0_18px_42px_rgba(0,0,0,0.24)]">
               <div className="absolute h-40 w-full max-w-[420px] bg-[radial-gradient(circle_at_68%_40%,rgba(255,255,255,0.22),transparent_22%),linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0)_42%),linear-gradient(90deg,#070909,#171a18)]" />
               {profile?.image && (
@@ -1276,7 +1043,6 @@ function CompanyDetailOverlay({
                 <p className="mt-2 max-w-[260px] text-xl font-semibold leading-tight text-white">{profile?.companyName ?? card.sub}</p>
               </div>
             </div>
-
             <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.28em] text-[#9c9f74]">
               {profile?.sector || "Company Research"} / {profile?.industry || "Analysis"}
             </p>
@@ -1287,7 +1053,6 @@ function CompanyDetailOverlay({
               {profile?.description || card.desc}
             </p>
           </header>
-
           <section className="grid grid-cols-2 gap-3 px-8 pb-8 md:grid-cols-4">
             <MetricCard label="Price" value={profile?.price ? `$${profile.price}` : "Loading"} />
             <MetricCard label="Change" value={profile?.change !== undefined ? `${profile.change >= 0 ? "+" : ""}${profile.change.toFixed(2)}%` : card.change} tone={(profile?.change ?? 0) >= 0 ? "up" : "down"} />
@@ -1298,7 +1063,6 @@ function CompanyDetailOverlay({
             <MetricCard label="EV/EBITDA" value={latestMetrics ? formatMultiple(latestMetrics.evToEBITDA) : "N/A"} />
             <MetricCard label="Revenue" value={latestIncome ? formatCurrency(latestIncome.revenue) : "N/A"} />
           </section>
-
           <section className="space-y-4 px-8 pb-8">
             {heavyReady && incomeData.length > 0 ? (
               <>
@@ -1312,8 +1076,8 @@ function CompanyDetailOverlay({
               <FinancialChartPlaceholder />
             )}
           </section>
-        </div>
-      </article>
+        </motion.div>
+      </motion.article>
     </div>
   );
 }
