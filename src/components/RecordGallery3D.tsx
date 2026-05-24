@@ -209,8 +209,8 @@ const DETAIL_PANEL_MAX_WIDTH = 680;
 const DETAIL_PANEL_MAX_HEIGHT = 500;
 const DETAIL_PANEL_WIDTH_RATIO = 0.76;
 const DETAIL_PANEL_HEIGHT_RATIO = 0.66;
-const DETAIL_OPEN_DURATION = 0.34;
-const DETAIL_CLOSE_DURATION = 0.36;
+const DETAIL_OPEN_DURATION = 0.58;
+const DETAIL_CLOSE_DURATION = 0.48;
 const DETAIL_HEAVY_CONTENT_DELAY_MS = 180;
 
 type RecordGallery3DProps = {
@@ -548,9 +548,9 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     });
 
     timeline
-      .to(content, { autoAlpha: 0, y: 8, duration: 0.11, ease: "power2.out" }, 0)
-      .to(panel, { autoAlpha: 0, duration: 0.16, ease: "power2.out" }, 0.03)
-      .to(cardFace, { autoAlpha: 1, duration: 0.14, ease: "power2.out" }, 0.02)
+      .to(content, { autoAlpha: 0, y: 8, duration: 0.14, ease: "power2.out" }, 0)
+      .to(panel, { autoAlpha: 0, duration: 0.18, ease: "power2.out" }, 0.02)
+      .to(cardFace, { autoAlpha: 1, duration: 0.22, ease: "power2.out" }, 0.04)
       .to(
         article,
         {
@@ -563,13 +563,13 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
           borderRadius: 7,
           transformPerspective: 560,
           duration: DETAIL_CLOSE_DURATION,
-          ease: "expo.out",
+          ease: "power3.out",
           force3D: true,
         },
         0.02,
       )
       // 末尾交叉淡出：overlay 渐隐，卡片已在下方显现，消除硬切换
-      .to(article, { autoAlpha: 0, duration: 0.08, ease: "power2.in" }, ">-0.08");
+      .to(article, { autoAlpha: 0, duration: 0.1, ease: "power2.in" }, ">-0.1");
   };
 
   const handleDetailWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
@@ -681,14 +681,14 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
           borderRadius: 12,
           transformPerspective: 560,
           duration: DETAIL_OPEN_DURATION,
-          ease: "expo.out",
+          ease: "power2.inOut",
           force3D: true,
         },
         0,
       )
-      .to(panel, { autoAlpha: 1, duration: 0.2, ease: "power2.out" }, 0.1)
-      .to(cardFace, { autoAlpha: 0, duration: 0.2, ease: "power2.out" }, 0.12)
-      .to(content, { autoAlpha: 1, y: 0, duration: 0.24, ease: "power3.out" }, 0.18);
+      .to(panel, { autoAlpha: 1, duration: 0.28, ease: "power2.out" }, 0.22)
+      .to(cardFace, { autoAlpha: 0, duration: 0.26, ease: "power2.out" }, 0.2)
+      .to(content, { autoAlpha: 1, y: 0, duration: 0.32, ease: "power3.out" }, 0.32);
 
     return () => {
       timeline.kill();
