@@ -947,34 +947,39 @@ function CompanyDetailOverlay({
   const extractScaleX = scaleX * 1.1;
   const extractScaleY = scaleY * 1.1;
 
-  // 两阶段 spring 序列：抽离 → 展开
+  // 重叠式两阶段 spring：阶段2在阶段1尚未静止时就启动，消除停顿
   useEffect(() => {
-    const run = async () => {
-      // 阶段1: 抽离 — 卡片从栈里浮起，倾斜加深
-      await controls.start({
-        x: extractX,
-        y: extractY,
-        scaleX: extractScaleX,
-        scaleY: extractScaleY,
-        rotateX: fromTilt * 1.6,
-        rotateZ: fromRoll * 0.4,
-        transition: SPRING_EXTRACT,
-      });
-      // 阶段2: 展开 — 飞到屏幕中央（transform 归零）
+    // 阶段1: 抽离 — 立即启动
+    controls.start({
+      x: extractX,
+      y: extractY,
+      scaleX: extractScaleX,
+      scaleY: extractScaleY,
+      rotateX: fromTilt * 1.6,
+      rotateZ: fromRoll * 0.4,
+      transition: SPRING_EXTRACT,
+    });
+
+    // 阶段2: 展开 — 在抽离动画进行到约60%时启动，形成连续运动
+    const expandTimer = setTimeout(() => {
       cardFaceControls.start({ opacity: 0, transition: { duration: 0.22 } });
       panelControls.start({ opacity: 1, transition: { duration: 0.2 } });
-      await controls.start({
-        x: 0,
-        y: 0,
-        scaleX: 1,
-        scaleY: 1,
-        rotateX: 0,
-        rotateZ: 0,
+      controls.start({
+        x: 0, y: 0, scaleX: 1, scaleY: 1,
+        rotateX: 0, rotateZ: 0,
         transition: SPRING_TRANSITION,
       });
+    }, 140);
+
+    // 内容淡入 — 稍晚启动，等面板可见后再显示
+    const contentTimer = setTimeout(() => {
       contentControls.start({ opacity: 1, y: 0, transition: SPRING_TRANSITION });
+    }, 320);
+
+    return () => {
+      clearTimeout(expandTimer);
+      clearTimeout(contentTimer);
     };
-    run();
   }, []);
 
   return (
