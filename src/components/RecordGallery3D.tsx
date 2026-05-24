@@ -866,16 +866,6 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     };
   }, []);
 
-  // 展开/收纳卡片的堆叠视觉状态（给独立图层用）
-  const overlaySymbol = expandedSymbol || closingSymbol;
-  const overlayCardData = useMemo(() => {
-    if (!overlaySymbol) return null;
-    const item = layout.find((l) => l.card.symbol === overlaySymbol);
-    if (!item) return null;
-    const visual = getCardVisualState(item, "stack");
-    return { card: item.card, visual };
-  }, [layout, overlaySymbol]);
-
   const clickableCards = layout.filter(({ isClickableSlot }) => isClickableSlot).sort((a, b) => a.y - b.y);
 
   const getHitMetrics = (item: (typeof clickableCards)[number]) => {
@@ -958,29 +948,53 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                 const expandW = expandTarget.width;
                 const expandH = expandTarget.height;
 
-                // 堆叠卡片动画（展开/收纳时变透明，由独立图层接管）
+                // 一体化：卡片本身就是展开/收纳元素
                 const stackWidth = Math.min(560, window.innerWidth * 0.72);
+                const springTransition = {
+                  type: "spring" as const,
+                  stiffness: 68,
+                  damping: 19,
+                  mass: 0.98,
+                };
                 const stackTween = {
                   type: "tween" as const,
                   duration: motionDuration / 1000,
                   ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
                   opacity: { duration: SCROLL_TRANSITION_MS / 1000, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
                 };
+                const cardTransition = isExpandedOrClosing ? springTransition : stackTween;
                 const cardAnimate = {
-                  y: visual.y,
-                  z: visual.z,
-                  rotateX: visual.tilt,
-                  rotateZ: visual.roll,
-                  scaleX: visual.scaleX,
-                  width: stackWidth,
-                  height: visual.height,
-                  borderRadius: 7,
-                  opacity: visual.opacity,
+                  y: isExpanded ? 0 : visual.y,
+                  z: isExpanded ? 0 : visual.z,
+                  rotateX: isExpanded ? 0 : visual.tilt,
+                  rotateZ: isExpanded ? 0 : visual.roll,
+                  scaleX: isExpanded ? 1 : visual.scaleX,
+                  width: isExpanded ? expandW : stackWidth,
+                  height: isExpanded ? expandH : visual.height,
+                  borderRadius: isExpanded ? 12 : 7,
+                  opacity: isExpanded ? 1 : visual.opacity,
                 };
+                const expandedFaceState: CardFaceRenderState = isExpanded ? {
+                  height: Math.min(132, Math.max(108, expandH * 0.26)),
+                  radius: 12,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.08)",
+                  boxShadow: "0 18px 46px rgba(0,0,0,0.36), 0 1px 0 rgba(255,255,255,0.14) inset",
+                  imageScale: 1,
+                  compactTitleOpacity: 0,
+                  detailTitleOpacity: 1,
+                  metaOpacity: 0.45,
+                  descriptionOpacity: 1,
+                  descriptionY: 0,
+                  hintOpacity: 0,
+                } : faceState;
                 const renderState = {
-                  ...faceState,
-                  borderColor: isHovered && !isExpandedOrClosing ? "rgba(255,255,255,0.34)" : faceState.borderColor,
+                  ...(isExpanded ? expandedFaceState : faceState),
+                  borderColor: isHovered && !isExpandedOrClosing ? "rgba(255,255,255,0.34)" : (isExpanded ? expandedFaceState : faceState).borderColor,
                 };
+
+                const cardDetail = detailCache[card.symbol] ?? fallbackDetail(card);
+                const cardProfile = cardDetail.profile ?? fallbackDetail(card).profile;
 
                 return (
                   <motion.div
@@ -994,119 +1008,46 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                     }}
                     data-card-symbol={card.symbol}
                     data-card-active={isActive ? "true" : "false"}
-                    className="absolute pointer-events-none select-none text-white"
+                    className={`absolute select-none text-white${isExpanded ? " pointer-events-auto" : " pointer-events-none"}`}
                     initial={false}
                     animate={cardAnimate}
-                    transition={stackTween}
+                    transition={cardTransition}
                     transformTemplate={(_, generated) => `translate(-50%, -50%) ${generated}`}
                     style={{
                       left: "50%",
                       top: "50%",
-                      zIndex: visual.zIndex,
+                      zIndex: isExpandedOrClosing ? 200 : visual.zIndex,
                       transformOrigin: "50% 50%",
-                      willChange: "transform",
+                      willChange: "transform, width, height",
                       backfaceVisibility: "hidden",
                       overflow: "hidden",
                     }}
+                    onAnimationComplete={() => {
+                      if (closingSymbol === card.symbol) {
+                        setClosingSymbol(null);
+                        activeSinceRef.current = performance.now();
+                      }
+                    }}
                   >
                     <CardFace card={card} state={renderState} />
+                    {isExpandedOrClosing && (
+                      <InlineDetailContent
+                        card={card}
+                        detail={cardDetail}
+                        profile={cardProfile}
+                        heavyReady={detailHeavyReady}
+                        headerHeight={Math.min(132, Math.max(108, expandH * 0.26))}
+                        totalHeight={expandH}
+                        onClose={closeDetailOverlay}
+                        onWheel={handleDetailWheel}
+                        onTouchStart={handleDetailTouchStart}
+                        onTouchMove={handleDetailTouchMove}
+                      />
+                    )}
                   </motion.div>
                 );
               })}
             </div>
-
-            {/* 独立图层：展开/收纳卡片（在 preserve-3d 外面，overflow:hidden 正常工作） */}
-            {overlayCardData && (expandedSymbol || closingSymbol) && (() => {
-              const { card, visual: stackVisual } = overlayCardData;
-              const expandTarget = getDetailTargetRect();
-              const expandW = expandTarget.width;
-              const expandH = expandTarget.height;
-              const stackWidth = Math.min(560, window.innerWidth * 0.72);
-              const isExpanded = expandedSymbol === card.symbol;
-              const springTransition = {
-                type: "spring" as const,
-                stiffness: 68,
-                damping: 19,
-                mass: 0.98,
-              };
-              const overlayAnimate = {
-                y: isExpanded ? 0 : stackVisual.y,
-                z: isExpanded ? 0 : stackVisual.z,
-                rotateX: isExpanded ? 0 : stackVisual.tilt,
-                rotateZ: isExpanded ? 0 : stackVisual.roll,
-                scaleX: isExpanded ? 1 : stackVisual.scaleX,
-                width: isExpanded ? expandW : stackWidth,
-                height: isExpanded ? expandH : stackVisual.height,
-                borderRadius: isExpanded ? 12 : 7,
-                opacity: 1,
-              };
-              const headerHeight = Math.min(132, Math.max(108, expandH * 0.26));
-              const expandedFaceState: CardFaceRenderState = {
-                height: headerHeight,
-                radius: 12,
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.08)",
-                boxShadow: "0 18px 46px rgba(0,0,0,0.36), 0 1px 0 rgba(255,255,255,0.14) inset",
-                imageScale: 1,
-                compactTitleOpacity: 0,
-                detailTitleOpacity: 1,
-                metaOpacity: 0.45,
-                descriptionOpacity: 1,
-                descriptionY: 0,
-                hintOpacity: 0,
-              };
-              const cardDetail = detailCache[card.symbol] ?? fallbackDetail(card);
-              const cardProfile = cardDetail.profile ?? fallbackDetail(card).profile;
-
-              return (
-                <motion.div
-                  key={`overlay-${card.symbol}`}
-                  className="absolute pointer-events-auto select-none text-white"
-                  initial={{
-                    y: stackVisual.y,
-                    z: stackVisual.z,
-                    rotateX: stackVisual.tilt,
-                    rotateZ: stackVisual.roll,
-                    scaleX: stackVisual.scaleX,
-                    width: stackWidth,
-                    height: stackVisual.height,
-                    borderRadius: 7,
-                    opacity: 1,
-                  }}
-                  animate={overlayAnimate}
-                  transition={springTransition}
-                  transformTemplate={(_, generated) => `translate(-50%, -50%) ${generated}`}
-                  style={{
-                    left: "50%",
-                    top: "50%",
-                    zIndex: 300,
-                    transformOrigin: "50% 50%",
-                    willChange: "transform, width, height",
-                    overflow: "hidden",
-                  }}
-                  onAnimationComplete={() => {
-                    if (closingSymbol === card.symbol) {
-                      setClosingSymbol(null);
-                      activeSinceRef.current = performance.now();
-                    }
-                  }}
-                >
-                  <CardFace card={card} state={expandedFaceState} />
-                  <InlineDetailContent
-                    card={card}
-                    detail={cardDetail}
-                    profile={cardProfile}
-                    heavyReady={detailHeavyReady}
-                    headerHeight={headerHeight}
-                    totalHeight={expandH}
-                    onClose={closeDetailOverlay}
-                    onWheel={handleDetailWheel}
-                    onTouchStart={handleDetailTouchStart}
-                    onTouchMove={handleDetailTouchMove}
-                  />
-                </motion.div>
-              );
-            })()}
 
             <div
               className={`absolute inset-0 z-[100]${expandedSymbol || closingSymbol ? " pointer-events-none" : ""}`}
