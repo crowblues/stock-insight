@@ -1032,29 +1032,31 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                   >
                     <CardFace card={card} state={renderState} />
                     {isExpandedOrClosing && (
-                      <motion.div
-                        initial={false}
-                        animate={{ opacity: isExpanded ? 1 : 0 }}
-                        transition={isClosing ? { type: "tween", duration: 0.38, ease: [0.4, 0, 0.2, 1] } : { duration: 0 }}
-                      >
-                        <InlineDetailContent
-                          card={card}
-                          detail={cardDetail}
-                          profile={cardProfile}
-                          heavyReady={detailHeavyReady}
-                          headerHeight={Math.min(132, Math.max(108, expandH * 0.26))}
-                          totalHeight={expandH}
-                          onClose={closeDetailOverlay}
-                          onWheel={handleDetailWheel}
-                          onTouchStart={handleDetailTouchStart}
-                          onTouchMove={handleDetailTouchMove}
-                        />
-                      </motion.div>
+                      <InlineDetailContent
+                        card={card}
+                        detail={cardDetail}
+                        profile={cardProfile}
+                        heavyReady={detailHeavyReady}
+                        headerHeight={Math.min(132, Math.max(108, expandH * 0.26))}
+                        totalHeight={expandH}
+                        onClose={closeDetailOverlay}
+                        onWheel={handleDetailWheel}
+                        onTouchStart={handleDetailTouchStart}
+                        onTouchMove={handleDetailTouchMove}
+                      />
                     )}
                   </motion.div>
                 );
               })}
             </div>
+
+            {/* 展开时的交互遮罩 - 在透视容器内部，z-150 低于展开卡片 z-200 */}
+            {(expandedSymbol || closingSymbol) && (
+              <div
+                className="absolute inset-0 z-[150]"
+                onClick={closeDetailOverlay}
+              />
+            )}
 
             <div
               className="absolute inset-0 z-[100]"
@@ -1108,13 +1110,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
           </div>
         </div>
 
-        {/* 展开时的交互遮罩 - 阻止其他卡片的点击/hover */}
-        {expandedSymbol && (
-          <div
-            className="absolute inset-0 z-[150]"
-            onClick={closeDetailOverlay}
-          />
-        )}
+        {/* 展开时的交互遮罩 - 已移至透视容器内部 */}
       </div>
     </section>
   );
