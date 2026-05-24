@@ -928,6 +928,7 @@ function CompanyDetailOverlay({
   const cardFaceControls = useAnimationControls();
   const panelControls = useAnimationControls();
   const contentControls = useAnimationControls();
+  const [closing, setClosing] = useState(false);
 
   // FLIP: 元素固定在最终位置，用 transform 偏移到初始位置，再动画归零
   const deltaX = fromRect.left + fromRect.width / 2 - (targetRect.left + targetRect.width / 2);
@@ -937,6 +938,7 @@ function CompanyDetailOverlay({
 
   // 单 spring 直接展开：从卡片原位自然放大到最终位置
   useEffect(() => {
+    if (closing) return;
     // 白板先淡入（盖住黑卡），用较长时间避免闪烁
     const panelTimer = setTimeout(() => {
       panelControls.start({ opacity: 1, transition: { duration: 0.38, ease: "easeOut" } });
@@ -955,6 +957,23 @@ function CompanyDetailOverlay({
       clearTimeout(contentTimer);
     };
   }, []);
+
+  // 收纳：反向序列 — 内容消失 → 白板淡出露出黑卡 → 缩回原位
+  const handleClose = useCallback(() => {
+    if (closing) return;
+    setClosing(true);
+    // 内容立即消失
+    contentControls.start({ opacity: 0, y: 8, transition: { duration: 0.12 } });
+    // 白板淡出，黑卡面淡入
+    panelControls.start({ opacity: 0, transition: { duration: 0.28, ease: "easeIn" } });
+    setTimeout(() => {
+      cardFaceControls.start({ opacity: 1, transition: { duration: 0.2 } });
+    }, 100);
+    // 延迟后真正卸载（等淡入淡出完成 + 缩回动画）
+    setTimeout(() => {
+      onClose();
+    }, 520);
+  }, [closing, onClose, contentControls, panelControls, cardFaceControls]);
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[300]">
@@ -978,27 +997,30 @@ function CompanyDetailOverlay({
           rotateZ: fromRoll,
           borderRadius: 7,
         }}
-        animate={{
-          x: 0,
-          y: 0,
-          scaleX: 1,
-          scaleY: 1,
-          rotateX: 0,
-          rotateZ: 0,
-          borderRadius: 12,
-          transition: SPRING_TRANSITION,
-        }}
-        exit={{
-          x: deltaX,
-          y: deltaY,
-          scaleX,
-          scaleY,
-          rotateX: fromTilt,
-          rotateZ: fromRoll,
-          borderRadius: 7,
-          opacity: 0,
-          transition: SPRING_TRANSITION,
-        }}
+        animate={
+          closing
+            ? {
+                x: deltaX,
+                y: deltaY,
+                scaleX,
+                scaleY,
+                rotateX: fromTilt,
+                rotateZ: fromRoll,
+                borderRadius: 7,
+                transition: SPRING_TRANSITION,
+              }
+            : {
+                x: 0,
+                y: 0,
+                scaleX: 1,
+                scaleY: 1,
+                rotateX: 0,
+                rotateZ: 0,
+                borderRadius: 12,
+                transition: SPRING_TRANSITION,
+              }
+        }
+        exit={{ opacity: 0, transition: { duration: 0 } }}
       >
         {/* 卡片面 — 初始可见，展开后淡出 */}
         <motion.div
@@ -1064,7 +1086,7 @@ function CompanyDetailOverlay({
               <span>Stock Insight Archive</span>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="rounded-[5px] bg-[#57584f] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-white shadow-[0_8px_16px_rgba(0,0,0,0.16)] transition hover:bg-[#34362f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f65370]"
               >
                 Back
