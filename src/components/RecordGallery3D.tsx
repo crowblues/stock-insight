@@ -944,7 +944,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                 const visual = getCardVisualState(item, isActive ? "active" : "stack");
                 const faceState = getCardFaceRenderState(visual);
                 const transform = `translate(-50%, -50%) translate3d(0, ${visual.y}px, ${visual.z}px) rotateX(${visual.tilt}deg) rotateZ(${visual.roll}deg) scaleX(${visual.scaleX})`;
-                const isExpandedClone = detailOverlay?.card.symbol === card.symbol && !overlayClosing;
+                const isExpandedClone = detailOverlay?.card.symbol === card.symbol;
                 if (isExpandedClone) return null;
                 const cardStyle: CSSProperties = {
                   left: "50%",
