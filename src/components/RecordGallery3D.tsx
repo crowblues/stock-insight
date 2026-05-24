@@ -937,17 +937,21 @@ function CompanyDetailOverlay({
 
   // 单 spring 直接展开：从卡片原位自然放大到最终位置
   useEffect(() => {
-    // 卡面淡出、面板淡入 — 展开过程中同步进行
-    const fadeTimer = setTimeout(() => {
-      cardFaceControls.start({ opacity: 0, transition: { duration: 0.25 } });
-      panelControls.start({ opacity: 1, transition: { duration: 0.25 } });
-    }, 80);
-    // 内容淡入 — 稍晚，等面板可见
+    // 白板先淡入（盖住黑卡），用较长时间避免闪烁
+    const panelTimer = setTimeout(() => {
+      panelControls.start({ opacity: 1, transition: { duration: 0.38, ease: "easeOut" } });
+    }, 100);
+    // 黑卡延迟淡出 — 等白板大部分可见后再消失，避免中间态露底
+    const cardFaceTimer = setTimeout(() => {
+      cardFaceControls.start({ opacity: 0, transition: { duration: 0.18 } });
+    }, 300);
+    // 内容淡入 — 等面板完全可见
     const contentTimer = setTimeout(() => {
       contentControls.start({ opacity: 1, y: 0, transition: SPRING_TRANSITION });
-    }, 250);
+    }, 320);
     return () => {
-      clearTimeout(fadeTimer);
+      clearTimeout(panelTimer);
+      clearTimeout(cardFaceTimer);
       clearTimeout(contentTimer);
     };
   }, []);
