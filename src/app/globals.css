@@ -120,6 +120,25 @@ html.lenis, html.lenis body { height: auto; }
   will-change: transform, opacity, filter;
 }
 
+@keyframes report-loading-sweep {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(320%);
+  }
+}
+
+.report-loading-panel {
+  border-radius: 7px;
+  transform-origin: 50% 62%;
+  will-change: transform, opacity;
+}
+
+.report-loading-sweep {
+  animation: report-loading-sweep 1.7s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
 .report-depth-layer {
   border-radius: 7px;
   transform-origin: 50% 55%;
@@ -155,6 +174,7 @@ html.lenis, html.lenis body { height: auto; }
 @media (prefers-reduced-motion: reduce) {
   .report-stage-inner,
   .report-panel,
+  .report-loading-sweep,
   .report-depth-layer,
   .report-back-button,
   .report-stage-leaving .report-stage-inner,

@@ -1,9 +1,9 @@
 "use client";
 
-import { animate, Spring } from "animejs";
 import { motion, type MotionValue } from "motion/react";
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -690,12 +690,13 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     if (!detailOverlay || overlayClosing) return;
     setOverlayClosing(true);
     setDetailHeavyReadySymbol(null);
-  };
-
-  const handleCloseComplete = useCallback(() => {
+    // 立即重置 routing/active，让卡片回到堆叠位置
     setIsRouting(false);
     setActiveIndex(null);
     setHoveredIndex(null);
+  };
+
+  const handleCloseComplete = useCallback(() => {
     setDetailOverlay(null);
     setOverlayClosing(false);
     activeSinceRef.current = performance.now();
@@ -944,8 +945,9 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                 const visual = getCardVisualState(item, isActive ? "active" : "stack");
                 const faceState = getCardFaceRenderState(visual);
                 const transform = `translate(-50%, -50%) translate3d(0, ${visual.y}px, ${visual.z}px) rotateX(${visual.tilt}deg) rotateZ(${visual.roll}deg) scaleX(${visual.scaleX})`;
-                const isExpandedClone = detailOverlay?.card.symbol === card.symbol;
+                const isExpandedClone = detailOverlay?.card.symbol === card.symbol && !overlayClosing;
                 if (isExpandedClone) return null;
+                const isClosingTarget = overlayClosing && detailOverlay?.card.symbol === card.symbol;
                 const cardStyle: CSSProperties = {
                   left: "50%",
                   top: "50%",
@@ -958,7 +960,9 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                   willChange: "transform, opacity",
                   backfaceVisibility: "hidden",
                   contain: "layout paint style",
-                  transition: `transform ${motionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease`,
+                  transition: isClosingTarget
+                    ? "none"
+                    : `transform ${motionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease`,
                 };
                 const renderState = {
                   ...faceState,
@@ -1078,70 +1082,22 @@ function CompanyDetailOverlay({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const closingRef = useRef(false);
+  const [closeRect, setCloseRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
 
   const headerHeight = Math.min(132, Math.max(108, targetRect.height * 0.26));
 
-  // 两阶段关闭动画：提前收纳（内容折叠）→ 平移回卡片位置
-  useEffect(() => {
-    if (!closing || closingRef.current) return;
-    closingRef.current = true;
-    const el = containerRef.current;
-    const contentEl = contentRef.current;
-    if (!el) { onCloseComplete(); return; }
-
-    el.style.transform = "none";
-    el.style.willChange = "transform, opacity, width, height";
-    el.style.transformOrigin = "50% 50%";
-
-    // Phase 1: 内容面板「卷」上去
-    if (contentEl) {
-      contentEl.style.pointerEvents = "none";
-      animate(contentEl, {
-        clipPath: ["inset(0 0 0% 0)", "inset(0 0 100% 0)"],
-        opacity: [1, 0.5],
-        duration: 180,
-        ease: "out(2)",
-      });
+  // 关闭时测量卡片实际 DOM 位置（同步，在 paint 前完成）
+  useLayoutEffect(() => {
+    if (!closing) return;
+    const cardEl = document.querySelector(`div[data-card-symbol="${card.symbol}"]`);
+    if (cardEl) {
+      const rect = cardEl.getBoundingClientRect();
+      setCloseRect({ left: rect.left, top: rect.top, width: rect.width, height: rect.height });
+    } else {
+      // fallback: 用 fromRect
+      setCloseRect({ left: fromRect.left, top: fromRect.top, width: fromRect.width, height: fromRect.height });
     }
-
-    // Phase 2: 收回卡片位置（用原始 fromRect）
-    const PHASE2_DELAY = 140;
-    setTimeout(() => {
-      el.style.overflow = "hidden";
-      el.style.height = `${headerHeight}px`;
-      el.style.width = `${targetRect.width}px`;
-      el.style.contain = "layout paint style";
-
-      const curCx = targetRect.left + targetRect.width / 2;
-      const curCy = targetRect.top + headerHeight / 2;
-      const toCx = fromRect.left + fromRect.width / 2;
-      const toCy = fromRect.top + fromRect.height / 2;
-      const dx = toCx - curCx;
-      const dy = toCy - curCy;
-
-      const spring = new Spring({ stiffness: 200, damping: 26, mass: 0.75 });
-      const dur = spring.settlingDuration;
-
-      setTimeout(() => {
-        el.style.transition = "opacity 100ms ease-out";
-        el.style.opacity = "0";
-      }, Math.max(0, dur - 120));
-
-      animate(el, {
-        transform: [
-          `translate(0px, 0px)`,
-          `translate(${dx}px, ${dy}px)`,
-        ],
-        width: [`${targetRect.width}px`, `${fromRect.width}px`],
-        height: [`${headerHeight}px`, `${fromRect.height}px`],
-        borderRadius: ["12px", "7px"],
-        duration: dur,
-        ease: spring,
-        onComplete: () => onCloseComplete(),
-      });
-    }, PHASE2_DELAY);
-  }, [closing, fromRect, targetRect, headerHeight, onCloseComplete]);
+  }, [closing, card.symbol, fromRect]);
 
   const profile = detail.profile ?? fallbackDetail(card).profile;
   const latestMetrics = detail.latestMetrics;
@@ -1163,8 +1119,24 @@ function CompanyDetailOverlay({
     hintOpacity: 0,
   };
 
-  const dx = fromRect.left - targetRect.left;
-  const dy = fromRect.top - targetRect.top;
+  const openDx = fromRect.left - targetRect.left;
+  const openDy = fromRect.top - targetRect.top;
+
+  // 关闭动画目标：相对于 overlay 的 left/top 的偏移
+  const closeDx = closeRect ? closeRect.left - targetRect.left : openDx;
+  const closeDy = closeRect ? closeRect.top - targetRect.top : openDy;
+  const closeW = closeRect ? closeRect.width : fromRect.width;
+  const closeH = closeRect ? closeRect.height : fromRect.height;
+
+  const isClosing = closing && closeRect !== null;
+
+  const CLOSE_TRANSITION = {
+    type: "spring" as const,
+    stiffness: 110,
+    damping: 22,
+    mass: 0.92,
+    opacity: { type: "tween" as const, duration: 0.12, ease: "easeOut", delay: 0.34 },
+  };
 
   return (
     <div className="pointer-events-none fixed inset-0" style={{ zIndex: 300 }}>
@@ -1174,24 +1146,35 @@ function CompanyDetailOverlay({
         style={{
           left: targetRect.left,
           top: targetRect.top,
-          borderRadius: 12,
+          borderRadius: isClosing ? 7 : 12,
           overflow: "hidden",
           willChange: "transform, width, height",
           contain: "layout style",
         }}
         initial={{
-          x: dx,
-          y: dy,
+          x: openDx,
+          y: openDy,
           width: fromRect.width,
           height: fromRect.height,
+          opacity: 1,
         }}
-        animate={{
+        animate={isClosing ? {
+          x: closeDx,
+          y: closeDy,
+          width: closeW,
+          height: closeH,
+          opacity: 0,
+        } : {
           x: 0,
           y: 0,
           width: targetRect.width,
           height: targetRect.height,
+          opacity: 1,
         }}
-        transition={LAYOUT_OPEN_TRANSITION}
+        transition={isClosing ? CLOSE_TRANSITION : LAYOUT_OPEN_TRANSITION}
+        onAnimationComplete={() => {
+          if (isClosing) onCloseComplete();
+        }}
       >
         <CardFace
           card={card}
@@ -1216,8 +1199,14 @@ function CompanyDetailOverlay({
             boxShadow: "0 24px 70px rgba(36,39,30,0.24), 0 1px 0 rgba(255,255,255,0.7) inset",
           }}
           initial={{ opacity: 0, clipPath: "inset(0 0 100% 0)" }}
-          animate={{ opacity: 1, clipPath: "inset(0 0 0% 0)" }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
+          animate={isClosing
+            ? { opacity: 0, clipPath: "inset(0 0 100% 0)" }
+            : { opacity: 1, clipPath: "inset(0 0 0% 0)" }
+          }
+          transition={isClosing
+            ? { duration: 0.26, ease: "easeOut" }
+            : { duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: 0.15 }
+          }
         >
           <div className="absolute inset-x-0 top-0 h-40 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0))]" />
           <div className="absolute inset-y-0 left-0 w-10 bg-[linear-gradient(90deg,rgba(152,163,111,0.16),rgba(152,163,111,0))]" />
