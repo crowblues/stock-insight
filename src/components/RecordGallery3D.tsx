@@ -965,7 +965,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                 const cardTransition = isExpandedOrClosing ? springTransition : stackTween;
                 const cardAnimate = {
                   y: isExpanded ? 0 : visual.y,
-                  z: isExpanded ? 0 : visual.z,
+                  z: isExpandedOrClosing ? 0 : visual.z,
                   rotateX: isExpanded ? 0 : visual.tilt,
                   rotateZ: isExpanded ? 0 : visual.roll,
                   scaleX: isExpanded ? 1 : visual.scaleX,
@@ -1050,16 +1050,8 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
               })}
             </div>
 
-            {/* 展开时的交互遮罩 - 在透视容器内部，z-150 低于展开卡片 z-200 */}
-            {(expandedSymbol || closingSymbol) && (
-              <div
-                className="absolute inset-0 z-[150]"
-                onClick={closeDetailOverlay}
-              />
-            )}
-
             <div
-              className="absolute inset-0 z-[100]"
+              className={`absolute inset-0 z-[100]${expandedSymbol || closingSymbol ? " pointer-events-none" : ""}`}
               aria-hidden="true"
             >
               {clickableCards.map((item, order) => {
@@ -1110,7 +1102,6 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
           </div>
         </div>
 
-        {/* 展开时的交互遮罩 - 已移至透视容器内部 */}
       </div>
     </section>
   );
