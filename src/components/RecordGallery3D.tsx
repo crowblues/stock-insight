@@ -563,10 +563,10 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [isRouting, setIsRouting] = useState(false);
-  const [detailOverlay, setDetailOverlay] = useState<DetailOverlayState | null>(null);
+  const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
+  const [closingSymbol, setClosingSymbol] = useState<string | null>(null);
   const [detailCache, setDetailCache] = useState<Record<string, CompanyDetailPayload>>({});
   const [detailHeavyReadySymbol, setDetailHeavyReadySymbol] = useState<string | null>(null);
-  const [overlayClosing, setOverlayClosing] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const cardRefs = useRef(new Map<string, HTMLElement>());
   const detailCacheRef = useRef(new Map<string, CompanyDetailPayload>());
@@ -641,7 +641,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   const handleCardClick = (index: number, event: ReactMouseEvent<HTMLButtonElement>) => {
     const now = event.timeStamp;
     if (now - lastScrollAtRef.current < CLICK_AFTER_SCROLL_DELAY_MS) return;
-    if (detailTimerRef.current || detailOverlay) return;
+    if (detailTimerRef.current || expandedSymbol) return;
 
     if (activeIndex !== index) {
       const card = CARDS[index];
@@ -677,28 +677,24 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
 
     setIsRouting(true);
     warmCompanyDetail(card);
-    const fromRect = toOverlayRect(cardElement.getBoundingClientRect());
-    setDetailOverlay({
-      card,
-      fromRect,
-      targetRect: getDetailTargetRect(),
-    });
+    // Option C: 直接展开卡片本身，不创建 overlay
+    setExpandedSymbol(card.symbol);
   };
 
   const closeDetailOverlay = () => {
-    if (!detailOverlay || overlayClosing) return;
-    setOverlayClosing(true);
+    if (!expandedSymbol || closingSymbol) return;
+    const sym = expandedSymbol;
+    setClosingSymbol(sym);
+    setExpandedSymbol(null);
     setDetailHeavyReadySymbol(null);
-    // 立即重置 routing/active，让卡片回到堆叠位置
     setIsRouting(false);
     setActiveIndex(null);
     setHoveredIndex(null);
+    // closingSymbol 由 motion.div onAnimationComplete 清理
   };
 
   const handleCloseComplete = useCallback(() => {
-    setDetailOverlay(null);
-    setOverlayClosing(false);
-    activeSinceRef.current = performance.now();
+    // 保留兼容性，但 Option C 不再需要
   }, []);
 
   const handleDetailWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
@@ -714,22 +710,22 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   };
 
   useEffect(() => {
-    if (!detailOverlay) return;
+    if (!expandedSymbol) return;
 
     const timer = window.setTimeout(() => {
-      setDetailHeavyReadySymbol(detailOverlay.card.symbol);
+      setDetailHeavyReadySymbol(expandedSymbol);
     }, DETAIL_HEAVY_CONTENT_DELAY_MS);
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [detailOverlay]);
+  }, [expandedSymbol]);
 
-  const detailHeavyReady = detailHeavyReadySymbol === detailOverlay?.card.symbol;
+  const detailHeavyReady = detailHeavyReadySymbol === expandedSymbol;
 
   useEffect(() => {
-    detailOpenRef.current = detailOverlay !== null;
-  }, [detailOverlay]);
+    detailOpenRef.current = expandedSymbol !== null || closingSymbol !== null;
+  }, [expandedSymbol, closingSymbol]);
 
   const warmCompanyDetail = (card: RecordCard) => {
     if (!detailCacheRef.current.has(card.symbol)) {
@@ -943,33 +939,65 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                 };
                 const visual = getCardVisualState(item, isActive ? "active" : "stack");
                 const faceState = getCardFaceRenderState(visual);
-                const transform = `translate(-50%, -50%) translate3d(0, ${visual.y}px, ${visual.z}px) rotateX(${visual.tilt}deg) rotateZ(${visual.roll}deg) scaleX(${visual.scaleX})`;
-                const isExpandedClone = detailOverlay?.card.symbol === card.symbol;
-                if (isExpandedClone && !overlayClosing) return null;
-                const isClosingTarget = overlayClosing && isExpandedClone;
-                const cardStyle: CSSProperties = {
-                  left: "50%",
-                  top: "50%",
-                  zIndex: visual.zIndex,
-                  width: "min(560px, 72vw)",
-                  opacity: visual.opacity,
-                  transform,
-                  transformStyle: "preserve-3d",
-                  transformOrigin: "50% 50%",
-                  willChange: "transform, opacity",
-                  backfaceVisibility: "hidden",
-                  contain: "layout paint style",
-                  transition: isClosingTarget
-                    ? "none"
-                    : `transform ${motionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease`,
+                const isExpanded = expandedSymbol === card.symbol;
+                const isClosing = closingSymbol === card.symbol;
+                const isExpandedOrClosing = isExpanded || isClosing;
+
+                // Option C: 卡片始终在 DOM 中，展开时改变样式
+                const expandTarget = getDetailTargetRect();
+                const expandW = expandTarget.width;
+                const expandH = expandTarget.height;
+
+                // Framer Motion spring 物理弹簧（展开/收纳）
+                const stackWidth = Math.min(560, window.innerWidth * 0.72);
+                const springTransition = {
+                  type: "spring" as const,
+                  stiffness: 68,
+                  damping: 19,
+                  mass: 0.98,
                 };
+                const stackTween = {
+                  type: "tween" as const,
+                  duration: motionDuration / 1000,
+                  ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+                  opacity: { duration: SCROLL_TRANSITION_MS / 1000, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+                };
+                const cardTransition = isExpandedOrClosing ? springTransition : stackTween;
+                const cardAnimate = {
+                  y: isExpanded ? 0 : visual.y,
+                  z: isExpanded ? 0 : visual.z,
+                  rotateX: isExpanded ? 0 : visual.tilt,
+                  rotateZ: isExpanded ? 0 : visual.roll,
+                  scaleX: isExpanded ? 1 : visual.scaleX,
+                  width: isExpanded ? expandW : stackWidth,
+                  height: isExpanded ? expandH : visual.height,
+                  borderRadius: isExpanded ? 12 : 7,
+                  opacity: isExpanded ? 1 : visual.opacity,
+                };
+                const expandedFaceState: CardFaceRenderState = isExpanded ? {
+                  height: Math.min(132, Math.max(108, expandH * 0.26)),
+                  radius: 12,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.08)",
+                  boxShadow: "0 18px 46px rgba(0,0,0,0.36), 0 1px 0 rgba(255,255,255,0.14) inset",
+                  imageScale: 1,
+                  compactTitleOpacity: 0,
+                  detailTitleOpacity: 1,
+                  metaOpacity: 0.45,
+                  descriptionOpacity: 1,
+                  descriptionY: 0,
+                  hintOpacity: 0,
+                } : faceState;
                 const renderState = {
-                  ...faceState,
-                  borderColor: isHovered ? "rgba(255,255,255,0.34)" : faceState.borderColor,
+                  ...(isExpanded ? expandedFaceState : faceState),
+                  borderColor: isHovered && !isExpandedOrClosing ? "rgba(255,255,255,0.34)" : (isExpanded ? expandedFaceState : faceState).borderColor,
                 };
 
+                const cardDetail = detailCache[card.symbol] ?? fallbackDetail(card);
+                const cardProfile = cardDetail.profile ?? fallbackDetail(card).profile;
+
                 return (
-                  <div
+                  <motion.div
                     key={card.symbol}
                     ref={(element) => {
                       if (element) {
@@ -980,11 +1008,44 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                     }}
                     data-card-symbol={card.symbol}
                     data-card-active={isActive ? "true" : "false"}
-                    className="pointer-events-none absolute select-none text-white"
-                    style={cardStyle}
+                    className={`absolute select-none text-white${isExpanded ? " pointer-events-auto" : " pointer-events-none"}`}
+                    initial={false}
+                    animate={cardAnimate}
+                    transition={cardTransition}
+                    transformTemplate={(_, generated) => `translate(-50%, -50%) ${generated}`}
+                    style={{
+                      left: "50%",
+                      top: "50%",
+                      zIndex: isExpandedOrClosing ? 200 : visual.zIndex,
+                      transformStyle: "preserve-3d",
+                      transformOrigin: "50% 50%",
+                      willChange: "transform, width, height",
+                      backfaceVisibility: "hidden",
+                      overflow: "hidden",
+                    }}
+                    onAnimationComplete={() => {
+                      if (closingSymbol === card.symbol) {
+                        setClosingSymbol(null);
+                        activeSinceRef.current = performance.now();
+                      }
+                    }}
                   >
                     <CardFace card={card} state={renderState} />
-                  </div>
+                    {isExpanded && (
+                      <InlineDetailContent
+                        card={card}
+                        detail={cardDetail}
+                        profile={cardProfile}
+                        heavyReady={detailHeavyReady}
+                        headerHeight={Math.min(132, Math.max(108, expandH * 0.26))}
+                        totalHeight={expandH}
+                        onClose={closeDetailOverlay}
+                        onWheel={handleDetailWheel}
+                        onTouchStart={handleDetailTouchStart}
+                        onTouchMove={handleDetailTouchMove}
+                      />
+                    )}
+                  </motion.div>
                 );
               })}
             </div>
@@ -1041,20 +1102,11 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
           </div>
         </div>
 
-        {detailOverlay && (
-          <CompanyDetailOverlay
-            key={detailOverlay.card.symbol}
-            card={detailOverlay.card}
-            detail={detailCache[detailOverlay.card.symbol] ?? fallbackDetail(detailOverlay.card)}
-            fromRect={detailOverlay.fromRect}
-            targetRect={detailOverlay.targetRect}
-            heavyReady={detailHeavyReady}
-            closing={overlayClosing}
-            onClose={closeDetailOverlay}
-            onCloseComplete={handleCloseComplete}
-            onWheel={handleDetailWheel}
-            onTouchStart={handleDetailTouchStart}
-            onTouchMove={handleDetailTouchMove}
+        {/* 展开时的交互遮罩 - 阻止其他卡片的点击/hover */}
+        {expandedSymbol && (
+          <div
+            className="absolute inset-0 z-[150]"
+            onClick={closeDetailOverlay}
           />
         )}
       </div>
@@ -1062,225 +1114,101 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   );
 }
 
-function CompanyDetailOverlay({
-  card, detail, fromRect, targetRect, heavyReady,
-  closing, onClose, onCloseComplete,
-  onWheel, onTouchStart, onTouchMove,
+/* ─── Option C: 内联详情内容（渲染在卡片内部） ─── */
+function InlineDetailContent({
+  card, detail, profile, heavyReady, headerHeight, totalHeight,
+  onClose, onWheel, onTouchStart, onTouchMove,
 }: {
   card: RecordCard;
   detail: CompanyDetailPayload;
-  fromRect: OverlayRect;
-  targetRect: OverlayRect;
+  profile: CompanyDetailPayload["profile"];
   heavyReady: boolean;
-  closing: boolean;
+  headerHeight: number;
+  totalHeight: number;
   onClose: () => void;
-  onCloseComplete: () => void;
-  onWheel: (event: ReactWheelEvent<HTMLDivElement>) => void;
-  onTouchStart: (event: ReactTouchEvent<HTMLDivElement>) => void;
-  onTouchMove: (event: ReactTouchEvent<HTMLDivElement>) => void;
+  onWheel: (e: ReactWheelEvent<HTMLDivElement>) => void;
+  onTouchStart: (e: ReactTouchEvent<HTMLDivElement>) => void;
+  onTouchMove: (e: ReactTouchEvent<HTMLDivElement>) => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [closeRect, setCloseRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
-
-  const headerHeight = Math.min(132, Math.max(108, targetRect.height * 0.26));
-
-  // 关闭时测量卡片实际 DOM 位置（延迟一帧，确保 Framer Motion 正确识别动画起点）
-  useEffect(() => {
-    if (!closing) return;
-    requestAnimationFrame(() => {
-      const cardEl = document.querySelector(`div[data-card-symbol="${card.symbol}"]`);
-      if (cardEl) {
-        const rect = cardEl.getBoundingClientRect();
-        setCloseRect({ left: rect.left, top: rect.top, width: rect.width, height: rect.height });
-      } else {
-        setCloseRect({ left: fromRect.left, top: fromRect.top, width: fromRect.width, height: fromRect.height });
-      }
-    });
-  }, [closing, card.symbol, fromRect]);
-
-  // 动画完成后清理（overlay 在 ~440ms 已完全透明，500ms 清理无视觉跳变）
-  useEffect(() => {
-    if (!closing || !closeRect) return;
-    const timer = setTimeout(() => onCloseComplete(), 500);
-    return () => clearTimeout(timer);
-  }, [closing, closeRect, onCloseComplete]);
-
-  const profile = detail.profile ?? fallbackDetail(card).profile;
   const latestMetrics = detail.latestMetrics;
   const latestIncome = detail.latestIncome;
   const incomeData = detail.incomeData ?? [];
-
-  const detailFaceState: CardFaceRenderState = {
-    height: headerHeight,
-    radius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    boxShadow: "0 18px 46px rgba(0,0,0,0.36), 0 1px 0 rgba(255,255,255,0.14) inset",
-    imageScale: 1,
-    compactTitleOpacity: 0,
-    detailTitleOpacity: 1,
-    metaOpacity: 0.45,
-    descriptionOpacity: 1,
-    descriptionY: 0,
-    hintOpacity: 0,
-  };
-
-  const openDx = fromRect.left - targetRect.left;
-  const openDy = fromRect.top - targetRect.top;
-
-  // 关闭动画目标：相对于 overlay 的 left/top 的偏移
-  const closeDx = closeRect ? closeRect.left - targetRect.left : openDx;
-  const closeDy = closeRect ? closeRect.top - targetRect.top : openDy;
-  const closeW = closeRect ? closeRect.width : fromRect.width;
-  const closeH = closeRect ? closeRect.height : fromRect.height;
-
-  const isClosing = closing && closeRect !== null;
-
-  const CLOSE_TRANSITION = {
-    default: { type: "spring" as const, stiffness: 68, damping: 19, mass: 0.98 },
-    opacity: { type: "tween" as const, duration: 0.12, delay: 0.32, ease: "easeOut" as const },
-  };
+  const contentHeight = totalHeight - headerHeight;
 
   return (
-    <div className="pointer-events-none fixed inset-0" style={{ zIndex: 300, perspective: 560 }}>
-      <motion.article
-        ref={containerRef}
-        className={`pointer-events-auto fixed text-[#20231d]${closing ? " !pointer-events-none" : ""}`}
-        style={{
-          left: targetRect.left,
-          top: targetRect.top,
-          borderRadius: isClosing ? 7 : 12,
-          overflow: "hidden",
-          willChange: "transform, width, height",
-          contain: "layout style",
-        }}
-        initial={{
-          x: openDx,
-          y: openDy,
-          width: fromRect.width,
-          height: fromRect.height,
-          opacity: 1,
-          rotateX: 0,
-        }}
-        animate={isClosing ? {
-          x: closeDx,
-          y: closeDy,
-          width: closeW,
-          height: closeH,
-          opacity: 0,
-          rotateX: -26,
-        } : {
-          x: 0,
-          y: 0,
-          width: targetRect.width,
-          height: targetRect.height,
-          opacity: 1,
-          rotateX: 0,
-        }}
-        transition={isClosing ? CLOSE_TRANSITION : LAYOUT_OPEN_TRANSITION}
+    <div
+      className="relative z-20 -mt-[1px] overflow-hidden border border-[#d7d8cd] bg-[#f8f7f2] text-[#20231d]"
+      style={{
+        height: contentHeight,
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
+        borderBottomLeftRadius: 12,
+        borderBottomRightRadius: 12,
+        boxShadow: "0 24px 70px rgba(36,39,30,0.24), 0 1px 0 rgba(255,255,255,0.7) inset",
+      }}
+    >
+      <div
+        data-detail-scroll
+        className="relative z-20 h-full touch-pan-y overflow-y-auto overscroll-contain"
+        onWheel={onWheel}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
       >
-        <CardFace
-          card={card}
-          state={detailFaceState}
-          className="z-30"
-          style={{
-            borderTopLeftRadius: 12,
-            borderTopRightRadius: 12,
-            borderBottomLeftRadius: 7,
-            borderBottomRightRadius: 7,
-          }}
-        />
-        <motion.div
-          ref={contentRef}
-          className="relative z-20 -mt-[1px] overflow-hidden border border-[#d7d8cd] bg-[#f8f7f2]"
-          style={{
-            height: targetRect.height - headerHeight,
-            borderTopLeftRadius: 0,
-            borderTopRightRadius: 0,
-            borderBottomLeftRadius: 12,
-            borderBottomRightRadius: 12,
-            boxShadow: "0 24px 70px rgba(36,39,30,0.24), 0 1px 0 rgba(255,255,255,0.7) inset",
-            transformOrigin: "top center",
-          }}
-          initial={{ opacity: 0, scale: 1, clipPath: "inset(0 0 100% 0)" }}
-          animate={isClosing
-            ? { opacity: 0, scale: 0.55, clipPath: "inset(0 0 0% 0)" }
-            : { opacity: 1, scale: 1, clipPath: "inset(0 0 0% 0)" }
-          }
-          transition={isClosing
-            ? { type: "spring", stiffness: 68, damping: 19, mass: 0.98 }
-            : { duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: 0.15 }
-          }
-        >
-          <div className="absolute inset-x-0 top-0 h-40 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0))]" />
-          <div className="absolute inset-y-0 left-0 w-10 bg-[linear-gradient(90deg,rgba(152,163,111,0.16),rgba(152,163,111,0))]" />
-          <div className="absolute inset-y-0 right-0 w-10 bg-[linear-gradient(270deg,rgba(246,83,112,0.12),rgba(246,83,112,0))]" />
-
-          <div
-            data-detail-scroll
-            className="relative z-20 h-full touch-pan-y overflow-y-auto overscroll-contain"
-            onWheel={onWheel}
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-          >
-          <header className="px-8 pb-5 pt-7 text-center">
-            <div className="mb-4 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-[#62645d]">
-              <span>Stock Insight Archive</span>
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-[5px] bg-[#57584f] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-white shadow-[0_8px_16px_rgba(0,0,0,0.16)] transition hover:bg-[#34362f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f65370]"
-              >
-                Back
-              </button>
-            </div>
-            <div className="relative mx-auto flex h-40 w-full max-w-[420px] items-center justify-center overflow-hidden bg-[#090a0a] shadow-[0_18px_42px_rgba(0,0,0,0.24)]">
-              <div className="absolute h-40 w-full max-w-[420px] bg-[radial-gradient(circle_at_68%_40%,rgba(255,255,255,0.22),transparent_22%),linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0)_42%),linear-gradient(90deg,#070909,#171a18)]" />
-              {profile?.image && (
-                <img src={profile.image} alt="" className="relative z-10 h-16 w-16 rounded-[6px] bg-white object-contain p-2 shadow-[0_14px_36px_rgba(0,0,0,0.28)]" />
-              )}
-              <div className="relative z-10 ml-5 text-left">
-                <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-white/45">{profile?.symbol ?? card.symbol}</p>
-                <p className="mt-2 max-w-[260px] text-xl font-semibold leading-tight text-white">{profile?.companyName ?? card.sub}</p>
-              </div>
-            </div>
-            <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.28em] text-[#9c9f74]">
-              {profile?.sector || "Company Research"} / {profile?.industry || "Analysis"}
-            </p>
-            <h1 className="mx-auto mt-2 max-w-[620px] text-[clamp(1.8rem,3.2vw,2.9rem)] font-bold leading-[0.98] text-[#7d8178]">
-              {profile?.companyName ?? card.sub}
-            </h1>
-            <p className="mx-auto mt-3 max-w-[560px] text-sm leading-6 text-[#5b5e57]">
-              {profile?.description || card.desc}
-            </p>
-          </header>
-          <section className="grid grid-cols-2 gap-3 px-8 pb-8 md:grid-cols-4">
-            <MetricCard label="Price" value={profile?.price ? `$${profile.price}` : "Loading"} />
-            <MetricCard label="Change" value={profile?.change !== undefined ? `${profile.change >= 0 ? "+" : ""}${profile.change.toFixed(2)}%` : card.change} tone={(profile?.change ?? 0) >= 0 ? "up" : "down"} />
-            <MetricCard label="Market Cap" value={profile?.marketCap ? formatCurrency(profile.marketCap) : "Loading"} />
-            <MetricCard label="P/E" value={detail.peRatio ? detail.peRatio.toFixed(1) : "N/A"} />
-            <MetricCard label="ROE" value={latestMetrics ? formatPercent(latestMetrics.returnOnEquity) : "N/A"} />
-            <MetricCard label="ROA" value={latestMetrics ? formatPercent(latestMetrics.returnOnAssets) : "N/A"} />
-            <MetricCard label="EV/EBITDA" value={latestMetrics ? formatMultiple(latestMetrics.evToEBITDA) : "N/A"} />
-            <MetricCard label="Revenue" value={latestIncome ? formatCurrency(latestIncome.revenue) : "N/A"} />
-          </section>
-          <section className="space-y-4 px-8 pb-8">
-            {heavyReady && incomeData.length > 0 ? (
-              <>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <RevenueChart data={incomeData} />
-                  <MarginChart data={incomeData} />
-                </div>
-                <EPSChart data={incomeData} />
-              </>
-            ) : (
-              <FinancialChartPlaceholder />
-            )}
-          </section>
+        <header className="px-8 pb-5 pt-7 text-center">
+          <div className="mb-4 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-[#62645d]">
+            <span>Stock Insight Archive</span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-[5px] bg-[#57584f] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-white shadow-[0_8px_16px_rgba(0,0,0,0.16)] transition hover:bg-[#34362f]"
+            >
+              Back
+            </button>
           </div>
-        </motion.div>
-      </motion.article>
+          <div className="relative mx-auto flex h-40 w-full max-w-[420px] items-center justify-center overflow-hidden bg-[#090a0a] shadow-[0_18px_42px_rgba(0,0,0,0.24)]">
+            <div className="absolute h-40 w-full max-w-[420px] bg-[radial-gradient(circle_at_68%_40%,rgba(255,255,255,0.22),transparent_22%),linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0)_42%),linear-gradient(90deg,#070909,#171a18)]" />
+            {profile?.image && (
+              <img src={profile.image} alt="" className="relative z-10 h-16 w-16 rounded-[6px] bg-white object-contain p-2 shadow-[0_14px_36px_rgba(0,0,0,0.28)]" />
+            )}
+            <div className="relative z-10 ml-5 text-left">
+              <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-white/45">{profile?.symbol ?? card.symbol}</p>
+              <p className="mt-2 max-w-[260px] text-xl font-semibold leading-tight text-white">{profile?.companyName ?? card.sub}</p>
+            </div>
+          </div>
+          <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.28em] text-[#9c9f74]">
+            {profile?.sector || "Company Research"} / {profile?.industry || "Analysis"}
+          </p>
+          <h1 className="mx-auto mt-2 max-w-[620px] text-[clamp(1.8rem,3.2vw,2.9rem)] font-bold leading-[0.98] text-[#7d8178]">
+            {profile?.companyName ?? card.sub}
+          </h1>
+          <p className="mx-auto mt-3 max-w-[560px] text-sm leading-6 text-[#5b5e57]">
+            {profile?.description || card.desc}
+          </p>
+        </header>
+        <section className="grid grid-cols-2 gap-3 px-8 pb-8 md:grid-cols-4">
+          <MetricCard label="Price" value={profile?.price ? `$${profile.price}` : "Loading"} />
+          <MetricCard label="Change" value={profile?.change !== undefined ? `${profile.change >= 0 ? "+" : ""}${profile.change.toFixed(2)}%` : card.change} tone={(profile?.change ?? 0) >= 0 ? "up" : "down"} />
+          <MetricCard label="Market Cap" value={profile?.marketCap ? formatCurrency(profile.marketCap) : "Loading"} />
+          <MetricCard label="P/E" value={detail.peRatio ? detail.peRatio.toFixed(1) : "N/A"} />
+          <MetricCard label="ROE" value={latestMetrics ? formatPercent(latestMetrics.returnOnEquity) : "N/A"} />
+          <MetricCard label="ROA" value={latestMetrics ? formatPercent(latestMetrics.returnOnAssets) : "N/A"} />
+          <MetricCard label="EV/EBITDA" value={latestMetrics ? formatMultiple(latestMetrics.evToEBITDA) : "N/A"} />
+          <MetricCard label="Revenue" value={latestIncome ? formatCurrency(latestIncome.revenue) : "N/A"} />
+        </section>
+        <section className="space-y-4 px-8 pb-8">
+          {heavyReady && incomeData.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <RevenueChart data={incomeData} />
+                <MarginChart data={incomeData} />
+              </div>
+              <EPSChart data={incomeData} />
+            </>
+          ) : (
+            <FinancialChartPlaceholder />
+          )}
+        </section>
+      </div>
     </div>
   );
 }
