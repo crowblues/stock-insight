@@ -1132,10 +1132,10 @@ function CompanyDetailOverlay({
 
   const CLOSE_TRANSITION = {
     type: "spring" as const,
-    stiffness: 110,
-    damping: 22,
-    mass: 0.92,
-    opacity: { type: "tween" as const, duration: 0.12, ease: "easeOut", delay: 0.34 },
+    stiffness: 72,
+    damping: 19,
+    mass: 0.96,
+    opacity: { type: "tween" as const, duration: 0.16, ease: [0.22, 1, 0.36, 1], delay: 0.36 },
   };
 
   return (
@@ -1200,11 +1200,11 @@ function CompanyDetailOverlay({
           }}
           initial={{ opacity: 0, clipPath: "inset(0 0 100% 0)" }}
           animate={isClosing
-            ? { opacity: 0, clipPath: "inset(0 0 100% 0)" }
+            ? { opacity: 1, clipPath: "inset(0 0 0% 0)" }
             : { opacity: 1, clipPath: "inset(0 0 0% 0)" }
           }
           transition={isClosing
-            ? { duration: 0.26, ease: "easeOut" }
+            ? { duration: 0.01 }
             : { duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: 0.15 }
           }
         >
