@@ -961,6 +961,7 @@ function CompanyDetailOverlay({
   }, []);
 
   // 收纳动画：纯命令式，零 re-render
+  // 关键：最后不是硬切卸载，而是 opacity handoff 让真实卡片接管
   const handleClose = useCallback(() => {
     if (closingRef.current) return;
     closingRef.current = true;
@@ -979,8 +980,15 @@ function CompanyDetailOverlay({
         transition: SPRING_TRANSITION,
       });
     }, 180);
-    // 卸载
-    setTimeout(() => { onClose(); }, 580);
+    // opacity handoff：缩回到位后淡出 overlay，让真实卡片接管
+    setTimeout(() => {
+      articleControls.start({
+        opacity: 0,
+        transition: { duration: 0.12, ease: "easeOut" },
+      });
+    }, 480);
+    // 卸载（handoff 完成后）
+    setTimeout(() => { onClose(); }, 620);
   }, [onClose, deltaX, deltaY, scaleX, scaleY, fromTilt, fromRoll,
       articleControls, contentControls, panelControls, cardFaceControls]);
 
