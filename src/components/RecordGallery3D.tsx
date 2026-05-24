@@ -935,33 +935,41 @@ function CompanyDetailOverlay({
   const panelControls = useAnimationControls();
   const contentControls = useAnimationControls();
 
+  // FLIP: 元素固定在最终位置，用 transform 偏移到初始位置，再动画归零
+  const deltaX = fromRect.left + fromRect.width / 2 - (targetRect.left + targetRect.width / 2);
+  const deltaY = fromRect.top + fromRect.height / 2 - (targetRect.top + targetRect.height / 2);
+  const scaleX = fromRect.width / targetRect.width;
+  const scaleY = fromRect.height / targetRect.height;
+
+  // 抽离阶段的中间态偏移
+  const extractX = deltaX * 0.88;
+  const extractY = deltaY - 36;
+  const extractScaleX = scaleX * 1.1;
+  const extractScaleY = scaleY * 1.1;
+
   // 两阶段 spring 序列：抽离 → 展开
   useEffect(() => {
     const run = async () => {
       // 阶段1: 抽离 — 卡片从栈里浮起，倾斜加深
       await controls.start({
-        left: fromRect.left - 8,
-        top: fromRect.top - 36,
-        width: fromRect.width * 1.1,
-        height: fromRect.height * 1.1,
+        x: extractX,
+        y: extractY,
+        scaleX: extractScaleX,
+        scaleY: extractScaleY,
         rotateX: fromTilt * 1.6,
         rotateZ: fromRoll * 0.4,
-        borderRadius: 7,
-        boxShadow: "0 42px 84px rgba(0,0,0,0.55)",
         transition: SPRING_EXTRACT,
       });
-      // 阶段2: 展开 — 飞到屏幕中央
+      // 阶段2: 展开 — 飞到屏幕中央（transform 归零）
       cardFaceControls.start({ opacity: 0, transition: { duration: 0.22 } });
       panelControls.start({ opacity: 1, transition: { duration: 0.2 } });
       await controls.start({
-        left: targetRect.left,
-        top: targetRect.top,
-        width: targetRect.width,
-        height: targetRect.height,
+        x: 0,
+        y: 0,
+        scaleX: 1,
+        scaleY: 1,
         rotateX: 0,
         rotateZ: 0,
-        borderRadius: 12,
-        boxShadow: "0 24px 70px rgba(36,39,30,0.24)",
         transition: SPRING_TRANSITION,
       });
       contentControls.start({ opacity: 1, y: 0, transition: SPRING_TRANSITION });
@@ -973,27 +981,33 @@ function CompanyDetailOverlay({
     <div className="pointer-events-none fixed inset-0 z-[300]">
       <motion.article
         className="pointer-events-auto fixed overflow-hidden text-[#20231d]"
-        style={{ transformOrigin: "50% 50%", willChange: "transform" }}
+        style={{
+          left: targetRect.left,
+          top: targetRect.top,
+          width: targetRect.width,
+          height: targetRect.height,
+          borderRadius: 12,
+          transformOrigin: "50% 50%",
+          willChange: "transform",
+        }}
         initial={{
-          left: fromRect.left,
-          top: fromRect.top,
-          width: fromRect.width,
-          height: fromRect.height,
-          borderRadius: 7,
+          x: deltaX,
+          y: deltaY,
+          scaleX,
+          scaleY,
           rotateX: fromTilt,
           rotateZ: fromRoll,
-          boxShadow: "0 18px 46px rgba(0,0,0,0.36)",
+          borderRadius: 7,
         }}
         animate={controls}
         exit={{
-          left: fromRect.left,
-          top: fromRect.top,
-          width: fromRect.width,
-          height: fromRect.height,
-          borderRadius: 7,
+          x: deltaX,
+          y: deltaY,
+          scaleX,
+          scaleY,
           rotateX: fromTilt,
           rotateZ: fromRoll,
-          boxShadow: "0 18px 46px rgba(0,0,0,0.36)",
+          borderRadius: 7,
           opacity: 0,
           transition: SPRING_TRANSITION,
         }}
