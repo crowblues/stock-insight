@@ -3,7 +3,6 @@
 import { motion, type MotionValue } from "motion/react";
 import {
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -945,9 +944,9 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                 const visual = getCardVisualState(item, isActive ? "active" : "stack");
                 const faceState = getCardFaceRenderState(visual);
                 const transform = `translate(-50%, -50%) translate3d(0, ${visual.y}px, ${visual.z}px) rotateX(${visual.tilt}deg) rotateZ(${visual.roll}deg) scaleX(${visual.scaleX})`;
-                const isExpandedClone = detailOverlay?.card.symbol === card.symbol && !overlayClosing;
-                if (isExpandedClone) return null;
-                const isClosingTarget = overlayClosing && detailOverlay?.card.symbol === card.symbol;
+                const isExpandedClone = detailOverlay?.card.symbol === card.symbol;
+                if (isExpandedClone && !overlayClosing) return null;
+                const isClosingTarget = overlayClosing && isExpandedClone;
                 const cardStyle: CSSProperties = {
                   left: "50%",
                   top: "50%",
@@ -1086,18 +1085,26 @@ function CompanyDetailOverlay({
 
   const headerHeight = Math.min(132, Math.max(108, targetRect.height * 0.26));
 
-  // 关闭时测量卡片实际 DOM 位置（同步，在 paint 前完成）
-  useLayoutEffect(() => {
+  // 关闭时测量卡片实际 DOM 位置（延迟一帧，确保 Framer Motion 正确识别动画起点）
+  useEffect(() => {
     if (!closing) return;
-    const cardEl = document.querySelector(`div[data-card-symbol="${card.symbol}"]`);
-    if (cardEl) {
-      const rect = cardEl.getBoundingClientRect();
-      setCloseRect({ left: rect.left, top: rect.top, width: rect.width, height: rect.height });
-    } else {
-      // fallback: 用 fromRect
-      setCloseRect({ left: fromRect.left, top: fromRect.top, width: fromRect.width, height: fromRect.height });
-    }
+    requestAnimationFrame(() => {
+      const cardEl = document.querySelector(`div[data-card-symbol="${card.symbol}"]`);
+      if (cardEl) {
+        const rect = cardEl.getBoundingClientRect();
+        setCloseRect({ left: rect.left, top: rect.top, width: rect.width, height: rect.height });
+      } else {
+        setCloseRect({ left: fromRect.left, top: fromRect.top, width: fromRect.width, height: fromRect.height });
+      }
+    });
   }, [closing, card.symbol, fromRect]);
+
+  // 动画完成后清理（overlay 在 ~440ms 已完全透明，500ms 清理无视觉跳变）
+  useEffect(() => {
+    if (!closing || !closeRect) return;
+    const timer = setTimeout(() => onCloseComplete(), 500);
+    return () => clearTimeout(timer);
+  }, [closing, closeRect, onCloseComplete]);
 
   const profile = detail.profile ?? fallbackDetail(card).profile;
   const latestMetrics = detail.latestMetrics;
@@ -1131,15 +1138,12 @@ function CompanyDetailOverlay({
   const isClosing = closing && closeRect !== null;
 
   const CLOSE_TRANSITION = {
-    type: "spring" as const,
-    stiffness: 72,
-    damping: 19,
-    mass: 0.96,
-    opacity: { type: "tween" as const, duration: 0.16, ease: [0.22, 1, 0.36, 1], delay: 0.36 },
+    default: { type: "spring" as const, stiffness: 68, damping: 19, mass: 0.98 },
+    opacity: { type: "tween" as const, duration: 0.12, delay: 0.32, ease: "easeOut" as const },
   };
 
   return (
-    <div className="pointer-events-none fixed inset-0" style={{ zIndex: 300 }}>
+    <div className="pointer-events-none fixed inset-0" style={{ zIndex: 300, perspective: 560 }}>
       <motion.article
         ref={containerRef}
         className={`pointer-events-auto fixed text-[#20231d]${closing ? " !pointer-events-none" : ""}`}
@@ -1157,6 +1161,7 @@ function CompanyDetailOverlay({
           width: fromRect.width,
           height: fromRect.height,
           opacity: 1,
+          rotateX: 0,
         }}
         animate={isClosing ? {
           x: closeDx,
@@ -1164,17 +1169,16 @@ function CompanyDetailOverlay({
           width: closeW,
           height: closeH,
           opacity: 0,
+          rotateX: -26,
         } : {
           x: 0,
           y: 0,
           width: targetRect.width,
           height: targetRect.height,
           opacity: 1,
+          rotateX: 0,
         }}
         transition={isClosing ? CLOSE_TRANSITION : LAYOUT_OPEN_TRANSITION}
-        onAnimationComplete={() => {
-          if (isClosing) onCloseComplete();
-        }}
       >
         <CardFace
           card={card}
@@ -1197,14 +1201,15 @@ function CompanyDetailOverlay({
             borderBottomLeftRadius: 12,
             borderBottomRightRadius: 12,
             boxShadow: "0 24px 70px rgba(36,39,30,0.24), 0 1px 0 rgba(255,255,255,0.7) inset",
+            transformOrigin: "top center",
           }}
-          initial={{ opacity: 0, clipPath: "inset(0 0 100% 0)" }}
+          initial={{ opacity: 0, scale: 1, clipPath: "inset(0 0 100% 0)" }}
           animate={isClosing
-            ? { opacity: 1, clipPath: "inset(0 0 0% 0)" }
-            : { opacity: 1, clipPath: "inset(0 0 0% 0)" }
+            ? { opacity: 0, scale: 0.55, clipPath: "inset(0 0 0% 0)" }
+            : { opacity: 1, scale: 1, clipPath: "inset(0 0 0% 0)" }
           }
           transition={isClosing
-            ? { duration: 0.01 }
+            ? { type: "spring", stiffness: 68, damping: 19, mass: 0.98 }
             : { duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: 0.15 }
           }
         >
