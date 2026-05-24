@@ -975,7 +975,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                   width: stackWidth,
                   height: visual.height,
                   borderRadius: 7,
-                  opacity: isExpandedOrClosing ? 0 : visual.opacity,
+                  opacity: visual.opacity,
                 };
                 const renderState = {
                   ...faceState,
@@ -1062,7 +1062,17 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                 <motion.div
                   key={`overlay-${card.symbol}`}
                   className="absolute pointer-events-auto select-none text-white"
-                  initial={false}
+                  initial={{
+                    y: stackVisual.y,
+                    z: stackVisual.z,
+                    rotateX: stackVisual.tilt,
+                    rotateZ: stackVisual.roll,
+                    scaleX: stackVisual.scaleX,
+                    width: stackWidth,
+                    height: stackVisual.height,
+                    borderRadius: 7,
+                    opacity: 1,
+                  }}
                   animate={overlayAnimate}
                   transition={springTransition}
                   transformTemplate={(_, generated) => `translate(-50%, -50%) ${generated}`}
