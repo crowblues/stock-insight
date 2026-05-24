@@ -688,14 +688,15 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
 
   const closeDetailOverlay = () => {
     if (!detailOverlay || overlayClosing) return;
-    setOverlayClosing(true);
-    setDetailHeavyReadySymbol(null);
-  };
-
-  const handleCloseComplete = useCallback(() => {
+    // 先重置 routing/active，让卡片回到正常堆叠位置
     setIsRouting(false);
     setActiveIndex(null);
     setHoveredIndex(null);
+    setDetailHeavyReadySymbol(null);
+    setOverlayClosing(true);
+  };
+
+  const handleCloseComplete = useCallback(() => {
     setDetailOverlay(null);
     setOverlayClosing(false);
     activeSinceRef.current = performance.now();
@@ -944,7 +945,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                 const visual = getCardVisualState(item, isActive ? "active" : "stack");
                 const faceState = getCardFaceRenderState(visual);
                 const transform = `translate(-50%, -50%) translate3d(0, ${visual.y}px, ${visual.z}px) rotateX(${visual.tilt}deg) rotateZ(${visual.roll}deg) scaleX(${visual.scaleX})`;
-                const isExpandedClone = detailOverlay?.card.symbol === card.symbol;
+                const isExpandedClone = detailOverlay?.card.symbol === card.symbol && !overlayClosing;
                 if (isExpandedClone) return null;
                 const cardStyle: CSSProperties = {
                   left: "50%",
@@ -1105,7 +1106,7 @@ function CompanyDetailOverlay({
       });
     }
 
-    // Phase 2: 收回卡片位置
+    // Phase 2: 收回卡片位置（实时测量卡片 DOM 位置）
     const PHASE2_DELAY = 140;
     setTimeout(() => {
       el.style.overflow = "hidden";
@@ -1113,10 +1114,14 @@ function CompanyDetailOverlay({
       el.style.width = `${targetRect.width}px`;
       el.style.contain = "layout paint style";
 
+      // 实时测量卡片在堆叠中的当前位置（已回到正常状态）
+      const cardEl = document.querySelector(`[data-card-symbol="${card.symbol}"]`);
+      const actualTarget = cardEl ? toOverlayRect(cardEl.getBoundingClientRect()) : fromRect;
+
       const curCx = targetRect.left + targetRect.width / 2;
       const curCy = targetRect.top + headerHeight / 2;
-      const toCx = fromRect.left + fromRect.width / 2;
-      const toCy = fromRect.top + fromRect.height / 2;
+      const toCx = actualTarget.left + actualTarget.width / 2;
+      const toCy = actualTarget.top + actualTarget.height / 2;
       const dx = toCx - curCx;
       const dy = toCy - curCy;
 
@@ -1133,8 +1138,8 @@ function CompanyDetailOverlay({
           `translate(0px, 0px)`,
           `translate(${dx}px, ${dy}px)`,
         ],
-        width: [`${targetRect.width}px`, `${fromRect.width}px`],
-        height: [`${headerHeight}px`, `${fromRect.height}px`],
+        width: [`${targetRect.width}px`, `${actualTarget.width}px`],
+        height: [`${headerHeight}px`, `${actualTarget.height}px`],
         borderRadius: ["12px", "7px"],
         duration: dur,
         ease: spring,
