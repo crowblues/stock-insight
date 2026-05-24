@@ -357,6 +357,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [isRouting, setIsRouting] = useState(false);
   const [detailOverlay, setDetailOverlay] = useState<DetailOverlayState | null>(null);
+  const [hiddenCardSymbol, setHiddenCardSymbol] = useState<string | null>(null);
   const [detailCache, setDetailCache] = useState<Record<string, CompanyDetailPayload>>({});
   const [detailHeavyReadySymbol, setDetailHeavyReadySymbol] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
@@ -477,16 +478,23 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
       fromTilt: layoutItem?.tilt ?? -16,
       fromRoll: layoutItem?.roll ?? 0,
     });
+    setHiddenCardSymbol(card.symbol);
   };
 
   const closeDetailOverlay = () => {
     setDetailOverlay(null);
+    setHiddenCardSymbol(null);
     setDetailHeavyReadySymbol(null);
     setIsRouting(false);
     setActiveIndex(null);
     setHoveredIndex(null);
     activeSinceRef.current = performance.now();
   };
+
+  // 提前让真实卡片开始 fade in（overlay 还在时就调用）
+  const revealCard = useCallback(() => {
+    setHiddenCardSymbol(null);
+  }, []);
 
   const handleDetailWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     event.stopPropagation();
@@ -715,7 +723,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                 const isHovered = hoveredIndex === index && !isActive && activeIndex === null;
                 const motionDuration = activeIndex !== null || isActive ? ACTIVE_TRANSITION_MS : SCROLL_TRANSITION_MS;
                 const transform = `translate(-50%, -50%) translate3d(0, ${y}px, ${z}px) rotateX(${tilt}deg) rotateZ(${roll}deg) scaleX(${width / 560})`;
-                const isExpandedClone = detailOverlay?.card.symbol === card.symbol;
+                const isExpandedClone = hiddenCardSymbol === card.symbol;
                 const cardStyle: CSSProperties = {
                   left: "50%",
                   top: "50%",
@@ -884,6 +892,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
               fromRoll={detailOverlay.fromRoll}
               heavyReady={detailHeavyReady}
               onClose={closeDetailOverlay}
+              onRevealCard={revealCard}
               onWheel={handleDetailWheel}
               onTouchStart={handleDetailTouchStart}
               onTouchMove={handleDetailTouchMove}
@@ -904,6 +913,7 @@ function CompanyDetailOverlay({
   fromRoll,
   heavyReady,
   onClose,
+  onRevealCard,
   onWheel,
   onTouchStart,
   onTouchMove,
@@ -916,6 +926,7 @@ function CompanyDetailOverlay({
   fromRoll: number;
   heavyReady: boolean;
   onClose: () => void;
+  onRevealCard: () => void;
   onWheel: (event: ReactWheelEvent<HTMLDivElement>) => void;
   onTouchStart: (event: ReactTouchEvent<HTMLDivElement>) => void;
   onTouchMove: (event: ReactTouchEvent<HTMLDivElement>) => void;
@@ -960,39 +971,23 @@ function CompanyDetailOverlay({
     };
   }, []);
 
-  // 收纳动画：纯命令式，零 re-render
-  // 核心：opacity handoff 必须在运动过程中完成，不能等停下来
+  // 收纳动画：iOS 式 dismiss
+  // 核心：onRevealCard 让真实卡片开始 CSS transition fade in
+  // 同时 overlay 整体淡出，形成 cross-fade，零身份切换
   const handleClose = useCallback(() => {
     if (closingRef.current) return;
     closingRef.current = true;
-    // 内容立即消失
-    contentControls.start({ opacity: 0, y: 8, transition: { duration: 0.1 } });
-    // 白板淡出，黑卡面淡入
-    panelControls.start({ opacity: 0, transition: { duration: 0.2, ease: "easeIn" } });
-    setTimeout(() => {
-      cardFaceControls.start({ opacity: 1, transition: { duration: 0.15 } });
-    }, 60);
-    // 缩回原位 — 用快速收敛 spring，减少尾部晃动
-    const SPRING_CLOSE = { type: "spring" as const, stiffness: 260, damping: 28, mass: 0.9 };
-    setTimeout(() => {
-      articleControls.start({
-        x: deltaX, y: deltaY, scaleX, scaleY,
-        rotateX: fromTilt, rotateZ: fromRoll, borderRadius: 7,
-        transition: SPRING_CLOSE,
-      });
-    }, 120);
-    // opacity handoff：在缩回运动中（卡片还在动时）开始淡出
-    // 人眼追踪运动时对渲染差异不敏感，趁这时完成身份切换
-    setTimeout(() => {
-      articleControls.start({
-        opacity: 0,
-        transition: { duration: 0.18, ease: "easeOut" },
-      });
-    }, 280);
-    // 卸载
-    setTimeout(() => { onClose(); }, 480);
-  }, [onClose, deltaX, deltaY, scaleX, scaleY, fromTilt, fromRoll,
-      articleControls, contentControls, panelControls, cardFaceControls]);
+    // 立即让真实卡片开始 fade in（通过 CSS transition）
+    onRevealCard();
+    // overlay 整体淡出 — 和真实卡片 fade in 形成 cross-fade
+    articleControls.start({
+      opacity: 0,
+      scale: 0.96,
+      transition: { duration: 0.28, ease: "easeOut" },
+    });
+    // 卸载（cross-fade 完成后）
+    setTimeout(() => { onClose(); }, 300);
+  }, [onClose, onRevealCard, articleControls]);
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[300]">
