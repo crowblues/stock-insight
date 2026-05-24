@@ -925,10 +925,11 @@ function CompanyDetailOverlay({
   const latestIncome = detail.latestIncome;
   const incomeData = detail.incomeData ?? [];
 
+  const articleControls = useAnimationControls();
   const cardFaceControls = useAnimationControls();
   const panelControls = useAnimationControls();
   const contentControls = useAnimationControls();
-  const [closing, setClosing] = useState(false);
+  const closingRef = useRef(false);
 
   // FLIP: 元素固定在最终位置，用 transform 偏移到初始位置，再动画归零
   const deltaX = fromRect.left + fromRect.width / 2 - (targetRect.left + targetRect.width / 2);
@@ -936,18 +937,19 @@ function CompanyDetailOverlay({
   const scaleX = fromRect.width / targetRect.width;
   const scaleY = fromRect.height / targetRect.height;
 
-  // 单 spring 直接展开：从卡片原位自然放大到最终位置
+  // 展开动画：命令式启动，无 state 变化
   useEffect(() => {
-    if (closing) return;
-    // 白板先淡入（盖住黑卡），用较长时间避免闪烁
+    articleControls.start({
+      x: 0, y: 0, scaleX: 1, scaleY: 1,
+      rotateX: 0, rotateZ: 0, borderRadius: 12,
+      transition: SPRING_TRANSITION,
+    });
     const panelTimer = setTimeout(() => {
       panelControls.start({ opacity: 1, transition: { duration: 0.38, ease: "easeOut" } });
     }, 100);
-    // 黑卡延迟淡出 — 等白板大部分可见后再消失，避免中间态露底
     const cardFaceTimer = setTimeout(() => {
       cardFaceControls.start({ opacity: 0, transition: { duration: 0.18 } });
     }, 300);
-    // 内容淡入 — 等面板完全可见
     const contentTimer = setTimeout(() => {
       contentControls.start({ opacity: 1, y: 0, transition: SPRING_TRANSITION });
     }, 320);
@@ -958,22 +960,29 @@ function CompanyDetailOverlay({
     };
   }, []);
 
-  // 收纳：反向序列 — 内容消失 → 白板淡出露出黑卡 → 缩回原位
+  // 收纳动画：纯命令式，零 re-render
   const handleClose = useCallback(() => {
-    if (closing) return;
-    setClosing(true);
-    // 内容立即消失
+    if (closingRef.current) return;
+    closingRef.current = true;
+    // 内容消失
     contentControls.start({ opacity: 0, y: 8, transition: { duration: 0.12 } });
     // 白板淡出，黑卡面淡入
-    panelControls.start({ opacity: 0, transition: { duration: 0.28, ease: "easeIn" } });
+    panelControls.start({ opacity: 0, transition: { duration: 0.25, ease: "easeIn" } });
     setTimeout(() => {
-      cardFaceControls.start({ opacity: 1, transition: { duration: 0.2 } });
-    }, 100);
-    // 延迟后真正卸载（等淡入淡出完成 + 缩回动画）
+      cardFaceControls.start({ opacity: 1, transition: { duration: 0.18 } });
+    }, 80);
+    // 缩回原位
     setTimeout(() => {
-      onClose();
-    }, 520);
-  }, [closing, onClose, contentControls, panelControls, cardFaceControls]);
+      articleControls.start({
+        x: deltaX, y: deltaY, scaleX, scaleY,
+        rotateX: fromTilt, rotateZ: fromRoll, borderRadius: 7,
+        transition: SPRING_TRANSITION,
+      });
+    }, 180);
+    // 卸载
+    setTimeout(() => { onClose(); }, 580);
+  }, [onClose, deltaX, deltaY, scaleX, scaleY, fromTilt, fromRoll,
+      articleControls, contentControls, panelControls, cardFaceControls]);
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[300]">
@@ -997,29 +1006,7 @@ function CompanyDetailOverlay({
           rotateZ: fromRoll,
           borderRadius: 7,
         }}
-        animate={
-          closing
-            ? {
-                x: deltaX,
-                y: deltaY,
-                scaleX,
-                scaleY,
-                rotateX: fromTilt,
-                rotateZ: fromRoll,
-                borderRadius: 7,
-                transition: SPRING_TRANSITION,
-              }
-            : {
-                x: 0,
-                y: 0,
-                scaleX: 1,
-                scaleY: 1,
-                rotateX: 0,
-                rotateZ: 0,
-                borderRadius: 12,
-                transition: SPRING_TRANSITION,
-              }
-        }
+        animate={articleControls}
         exit={{ opacity: 0, transition: { duration: 0 } }}
       >
         {/* 卡片面 — 初始可见，展开后淡出 */}
