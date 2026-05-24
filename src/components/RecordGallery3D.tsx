@@ -560,6 +560,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
           scaleY: closeTransform.scaleY,
           rotateX: current.fromTilt,
           rotateZ: current.fromRoll,
+          borderRadius: 7,
           transformPerspective: 560,
           duration: DETAIL_CLOSE_DURATION,
           ease: "expo.out",
@@ -677,6 +678,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
           scaleY: 1,
           rotateX: 0,
           rotateZ: 0,
+          borderRadius: 12,
           transformPerspective: 560,
           duration: DETAIL_OPEN_DURATION,
           ease: "expo.out",
@@ -1114,6 +1116,8 @@ function CompanyDetailOverlay({
     top: targetRect.top,
     width: targetRect.width,
     height: targetRect.height,
+    borderRadius: 7,
+    boxShadow: "0 18px 46px rgba(0,0,0,0.36), 0 1px 0 rgba(255,255,255,0.14) inset",
     transformOrigin: "0 0",
     willChange: "transform",
   };
@@ -1133,9 +1137,10 @@ function CompanyDetailOverlay({
             detailCardFaceRef.current = element;
           }}
           data-detail-card-face
-          className="absolute inset-0 border border-white/20 text-white shadow-[0_18px_46px_rgba(0,0,0,0.36),0_1px_0_rgba(255,255,255,0.14)_inset]"
+          className="absolute inset-0 border border-white/8 text-white shadow-[0_18px_46px_rgba(0,0,0,0.36),0_1px_0_rgba(255,255,255,0.14)_inset]"
           style={{
-            backgroundImage: `linear-gradient(90deg, rgba(4,5,5,0.97) 0%, rgba(8,9,10,0.9) 48%, rgba(10,12,12,0.76) 100%), url(${card.image})`,
+            borderRadius: "inherit",
+            backgroundImage: `linear-gradient(90deg, rgba(4,5,5,0.97) 0%, rgba(8,9,10,0.88) 46%, rgba(10,12,12,0.74) 100%), url(${card.image})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
