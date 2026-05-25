@@ -1,9 +1,11 @@
 "use client";
 
+import { memo } from "react";
 import { motion, type ComponentProps } from "motion/react";
 import type { RecordCard, CardFaceRenderState } from "./types";
 
-export function CardFace({
+/** 方案3：React.memo 避免展开/关闭时其他卡片不必要的 re-render */
+export const CardFace = memo(function CardFace({
   card,
   state,
   className,
@@ -102,4 +104,4 @@ export function CardFace({
       </div>
     </motion.div>
   );
-}
+});

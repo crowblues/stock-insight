@@ -21,7 +21,7 @@
  */
 
 import { motion } from "motion/react";
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent, type WheelEvent as ReactWheelEvent } from "react";
+import { useEffect, useMemo, useRef, useState, memo, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent, type WheelEvent as ReactWheelEvent } from "react";
 import type { RecordCard, CompanyDetailPayload, CardLayoutItem, RecordGallery3DProps } from "./types";
 import { CARDS } from "./data";
 import {
@@ -47,6 +47,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   const [closingSymbol, setClosingSymbol] = useState<string | null>(null);
   const [detailCache, setDetailCache] = useState<Record<string, CompanyDetailPayload>>({});
   const [detailHeavyReadySymbol, setDetailHeavyReadySymbol] = useState<string | null>(null);
+  const [detailMountedSymbol, setDetailMountedSymbol] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const cardRefs = useRef(new Map<string, HTMLElement>());
   const detailCacheRef = useRef(new Map<string, CompanyDetailPayload>());
@@ -172,6 +173,13 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   const detailHeavyReady = detailHeavyReadySymbol === expandedSymbol;
 
   /* ─── 副作用：详情延迟加载 ─── */
+  useEffect(() => {
+    if (!expandedSymbol) { setDetailMountedSymbol(null); return; }
+    // 方案1：延迟 1 帧挂载 InlineDetailContent，避免首帧阻塞动画
+    const raf = requestAnimationFrame(() => setDetailMountedSymbol(expandedSymbol));
+    return () => cancelAnimationFrame(raf);
+  }, [expandedSymbol]);
+
   useEffect(() => {
     if (!expandedSymbol) return;
     const timer = window.setTimeout(() => {
@@ -326,7 +334,14 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
           >
             {/* ─── preserve-3d 堆叠层 ─── */}
             <div className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}>
-              {layout.map(({ card, index, motionSlot, opacity, y, z, width, height, tilt, roll }) => {
+              {/* 方案2：提取到 map 外部，避免 12 张卡片重复计算 */}
+              {(() => {
+                const expandTarget = getDetailTargetRect();
+                const expandW = expandTarget.width;
+                const expandH = expandTarget.height;
+                const stackWidth = getStackWidth();
+
+                return layout.map(({ card, index, motionSlot, opacity, y, z, width, height, tilt, roll }) => {
                 const isActive = index === activeIndex;
                 const isHovered = hoveredIndex === index && !isActive && activeIndex === null;
                 const motionDuration = activeIndex !== null || isActive ? ACTIVE_TRANSITION_MS : SCROLL_TRANSITION_MS;
@@ -336,11 +351,6 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                 const isExpanded = expandedSymbol === card.symbol;
                 const isClosing = closingSymbol === card.symbol;
                 const isExpandedOrClosing = isExpanded || isClosing;
-
-                const expandTarget = getDetailTargetRect();
-                const expandW = expandTarget.width;
-                const expandH = expandTarget.height;
-                const stackWidth = getStackWidth();
 
                 const cardTransition = isExpandedOrClosing ? SPRING_CONFIG : {
                   type: "tween" as const,
@@ -402,7 +412,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                     onAnimationComplete={() => {}}
                   >
                     <CardFace card={card} state={renderState} />
-                    {isExpanded && (
+                    {detailMountedSymbol === card.symbol && (
                       <InlineDetailContent
                         card={card} detail={cardDetail} profile={cardProfile}
                         heavyReady={detailHeavyReady}
@@ -416,7 +426,8 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                     )}
                   </motion.div>
                 );
-              })}
+              });
+              })()}
             </div>
             {/* ─── 方案B：动画层（preserve-3d 外部，overflow:hidden 有效） ─── */}
             {closingSymbol && closingLayoutItem && (() => {
