@@ -385,6 +385,7 @@ function CardFace({
         backgroundSize: "cover",
         backgroundPosition: "center",
         boxShadow: state.boxShadow,
+        flexShrink: 0, // Flex 布局中保持固定高度，不被压缩
         ...style,
       }}
     >
@@ -866,6 +867,14 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     };
   }, []);
 
+  // ═══════════════════════════════════════════════════════════
+  // 方案B：Apple-style 动画层 — 关闭卡片在 preserve-3d 外渲染
+  // overflow:hidden 在平面层有效，彻底消除穿模
+  // ═══════════════════════════════════════════════════════════
+  const closingLayoutItem = closingSymbol
+    ? layout.find((item) => item.card.symbol === closingSymbol) ?? null
+    : null;
+
   const clickableCards = layout.filter(({ isClickableSlot }) => isClickableSlot).sort((a, b) => a.y - b.y);
 
   const getHitMetrics = (item: (typeof clickableCards)[number]) => {
@@ -962,7 +971,18 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                   ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
                   opacity: { duration: SCROLL_TRANSITION_MS / 1000, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
                 };
+                // ═══════════════════════════════════════════════════════════
+                // 动画系统（一体化架构 - 请勿修改关闭卡片的动画逻辑）
+                // ═══════════════════════════════════════════════════════════
                 const cardTransition = isExpandedOrClosing ? springTransition : stackTween;
+
+                // -------------------------------------------------------
+                // 穿模适配：仅在展开状态（静态）隐藏其他卡片
+                // 收纳开始瞬间 expandedSymbol 被清除，其他卡片立刻恢复显示
+                // 这样收纳动画期间用户能看到卡片堆叠回来的效果
+                // -------------------------------------------------------
+                const shouldFadeOut = !!expandedSymbol && !isExpandedOrClosing;
+
                 const cardAnimate = {
                   y: isExpanded ? 0 : visual.y,
                   z: isExpanded ? 0 : visual.z,
@@ -972,7 +992,9 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                   width: isExpanded ? expandW : stackWidth,
                   height: isExpanded ? expandH : visual.height,
                   borderRadius: isExpanded ? 12 : 7,
-                  opacity: isExpanded ? 1 : visual.opacity,
+                  // 关闭卡片：保持原始 opacity 逻辑（一体化动画不动）
+                  // 其他卡片：展开/收纳期间淡出到 0，避免穿模
+                  opacity: isExpanded ? 1 : (shouldFadeOut ? 0 : visual.opacity),
                 };
                 const expandedFaceState: CardFaceRenderState = isExpanded ? {
                   height: Math.min(132, Math.max(108, expandH * 0.26)),
@@ -1021,16 +1043,17 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                       willChange: "transform, width, height",
                       backfaceVisibility: "hidden",
                       overflow: "hidden",
+                      // Flex 布局：让 InlineDetailContent 高度跟随卡片缩小
+                      display: "flex",
+                      flexDirection: "column" as const,
+                      // 方案B：关闭时原卡片保持可见（只有CardFace），动画层负责白色区域裁剪
                     }}
                     onAnimationComplete={() => {
-                      if (closingSymbol === card.symbol) {
-                        setClosingSymbol(null);
-                        activeSinceRef.current = performance.now();
-                      }
+                      // 方案B：关闭动画由动画层处理，原卡片不再清理 closingSymbol
                     }}
                   >
                     <CardFace card={card} state={renderState} />
-                    {isExpandedOrClosing && (
+                    {isExpanded && (
                       <InlineDetailContent
                         card={card}
                         detail={cardDetail}
@@ -1048,6 +1071,75 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                 );
               })}
             </div>
+
+            {/* ═══ 方案B：动画层（preserve-3d 外部，overflow:hidden 有效） ═══ */}
+            {closingSymbol && closingLayoutItem && (() => {
+              const clItem = closingLayoutItem;
+              const clCard = clItem.card;
+              const clVisual = getCardVisualState(clItem, "stack");
+              const clFaceState = getCardFaceRenderState(clVisual);
+              const clExpandTarget = getDetailTargetRect();
+              const clExpandW = clExpandTarget.width;
+              const clExpandH = clExpandTarget.height;
+              const clStackWidth = Math.min(560, window.innerWidth * 0.72);
+              const clSpring = { type: "spring" as const, stiffness: 68, damping: 19, mass: 0.98 };
+              const clDetail = detailCache[clCard.symbol] ?? fallbackDetail(clCard);
+              const clProfile = clDetail.profile ?? fallbackDetail(clCard).profile;
+
+              return (
+                <motion.div
+                  key={`closing-layer-${clCard.symbol}`}
+                  className="absolute select-none text-white pointer-events-auto"
+                  initial={{
+                    y: 0, z: 0, rotateX: 0, rotateZ: 0, scaleX: 1,
+                    width: clExpandW, height: clExpandH,
+                    borderRadius: 12, opacity: 1,
+                  }}
+                  animate={{
+                    y: clVisual.y, z: clVisual.z,
+                    rotateX: clVisual.tilt, rotateZ: clVisual.roll,
+                    scaleX: clVisual.scaleX,
+                    width: clStackWidth, height: clVisual.height,
+                    borderRadius: 7, opacity: 0,
+                  }}
+                  transition={{
+                    ...clSpring,
+                    // opacity 延迟淡出：动画前半段保持可见，后半段渐隐
+                    // 让动画层平滑交接给 preserve-3d 中的原卡片
+                    opacity: { type: "tween", duration: 0.28, delay: 0.38, ease: "easeIn" },
+                  }}
+                  transformTemplate={(_, generated) => `translate(-50%, -50%) ${generated}`}
+                  style={{
+                    left: "50%",
+                    top: "50%",
+                    zIndex: 200,
+                    transformOrigin: "50% 50%",
+                    willChange: "transform, width, height",
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column" as const,
+                  }}
+                  onAnimationComplete={() => {
+                    setClosingSymbol(null);
+                    activeSinceRef.current = performance.now();
+                  }}
+                >
+                  <CardFace card={clCard} state={clFaceState} />
+                  <InlineDetailContent
+                    card={clCard}
+                    detail={clDetail}
+                    profile={clProfile}
+                    heavyReady={false}
+                    headerHeight={Math.min(132, Math.max(108, clExpandH * 0.26))}
+                    totalHeight={clExpandH}
+                    onClose={closeDetailOverlay}
+                    onWheel={handleDetailWheel}
+                    onTouchStart={handleDetailTouchStart}
+                    onTouchMove={handleDetailTouchMove}
+                  />
+                </motion.div>
+              );
+            })()}
 
             <div
               className={`absolute inset-0 z-[100]${expandedSymbol || closingSymbol ? " pointer-events-none" : ""}`}
@@ -1131,7 +1223,10 @@ function InlineDetailContent({
     <div
       className="relative z-20 -mt-[1px] overflow-hidden border border-[#d7d8cd] bg-[#f8f7f2] text-[#20231d]"
       style={{
-        height: contentHeight,
+        // Flex 自适应：高度跟随卡片缩小，不再固定
+        // 卡片缩小时此区域自然缩小到 0，实现"插回卡堆"效果
+        flex: "1 1 0",
+        minHeight: 0,
         borderTopLeftRadius: 0,
         borderTopRightRadius: 0,
         borderBottomLeftRadius: 12,
