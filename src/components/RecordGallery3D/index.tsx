@@ -21,7 +21,7 @@
  */
 
 import { motion } from "motion/react";
-import { useEffect, useMemo, useRef, useState, memo, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent, type WheelEvent as ReactWheelEvent } from "react";
+import { useEffect, useMemo, useRef, useState, startTransition, memo, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent, type WheelEvent as ReactWheelEvent } from "react";
 import type { RecordCard, CompanyDetailPayload, CardLayoutItem, RecordGallery3DProps } from "./types";
 import { CARDS } from "./data";
 import {
@@ -30,7 +30,7 @@ import {
   SCROLL_TRANSITION_MS, ACTIVE_TRANSITION_MS,
   WHEEL_STEP_SIZE, TOUCH_STEP_SIZE, MAX_WHEEL_STEP, MAX_TOUCH_STEP,
   EDGE_FADE_WIDTH, MIN_CLICKABLE_OPACITY, FRONT_ACTIVE_START,
-  CLICK_AFTER_SCROLL_DELAY_MS, CONFIRM_CLICK_DELAY_MS,
+  CLICK_AFTER_SCROLL_DELAY_MS, CONFIRM_CLICK_DELAY_MS, SWITCH_REOPEN_DELAY_MS,
   DETAIL_HEAVY_CONTENT_DELAY_MS, SPRING_CONFIG,
 } from "./constants";
 import { getCardVisualState, getCardFaceRenderState, getDetailTargetRect, getStackWidth, getPerspective } from "./layout";
@@ -108,32 +108,48 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
 
   const clickableCards = layout.filter(({ isClickableSlot }) => isClickableSlot).sort((a, b) => a.y - b.y);
 
-  /* ─── 卡片点击与展开 ─── */
+  /* ─── 卡片点击与展开（两次点击流程） ─── */
   const handleCardClick = (index: number, event: ReactMouseEvent<HTMLButtonElement>) => {
     const now = event.timeStamp;
     if (now - lastScrollAtRef.current < CLICK_AFTER_SCROLL_DELAY_MS) return;
     if (expandedSymbol) return;
 
+    // 第一次点击：激活卡片（抬起）
     if (activeIndex !== index) {
       const card = CARDS[index];
       setIsRouting(false);
-      setActiveIndex(index);
-      activeSinceRef.current = performance.now();
-      warmCompanyDetail(card);
-      pendingActiveTimerRef.current = setTimeout(() => {
+      if (pendingActiveTimerRef.current) {
+        clearTimeout(pendingActiveTimerRef.current);
         pendingActiveTimerRef.current = null;
-        setIsRouting(true);
-        setExpandedSymbol(card.symbol);
-      }, CONFIRM_CLICK_DELAY_MS);
+      }
+
+      // 如果已有 active 卡片，先收回再切换（50ms 延迟）
+      if (activeIndex !== null) {
+        activeSinceRef.current = 0;
+        setActiveIndex(null);
+        pendingActiveTimerRef.current = setTimeout(() => {
+          activeSinceRef.current = performance.now();
+          pendingActiveTimerRef.current = null;
+          setActiveIndex(index);
+          warmCompanyDetail(card);
+        }, SWITCH_REOPEN_DELAY_MS);
+        return;
+      }
+
+      activeSinceRef.current = now;
+      setActiveIndex(index);
+      warmCompanyDetail(card);
       return;
     }
 
+    // 第二次点击同一张卡片：展开详情（需超过确认延迟）
     if (now - activeSinceRef.current < CONFIRM_CLICK_DELAY_MS) return;
 
     const card = CARDS[index];
     const cardElement = cardRefs.current.get(card.symbol);
     if (!cardElement) return;
 
+    performance.mark("expand-start");
     setIsRouting(true);
     warmCompanyDetail(card);
     setExpandedSymbol(card.symbol);
@@ -153,30 +169,37 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   const handleDetailTouchStart = (e: ReactTouchEvent<HTMLDivElement>) => { e.stopPropagation(); };
   const handleDetailTouchMove = (e: ReactTouchEvent<HTMLDivElement>) => { e.stopPropagation(); };
 
-  /* ─── 数据预加载 ─── */
+  /* ─── 数据预加载（startTransition 隔离 re-render，不打断动画） ─── */
   const warmCompanyDetail = (card: RecordCard) => {
     if (detailCacheRef.current.has(card.symbol)) {
-      setDetailCache((prev) => ({ ...prev, [card.symbol]: detailCacheRef.current.get(card.symbol)! }));
+      startTransition(() => {
+        setDetailCache((prev) => ({ ...prev, [card.symbol]: detailCacheRef.current.get(card.symbol)! }));
+      });
       return;
     }
     const fb = fallbackDetail(card);
     detailCacheRef.current.set(card.symbol, fb);
-    setDetailCache((prev) => ({ ...prev, [card.symbol]: fb }));
+    startTransition(() => {
+      setDetailCache((prev) => ({ ...prev, [card.symbol]: fb }));
+    });
     loadCompanyDetail(card.symbol).then((detail) => {
       if (!detail) return;
       const normalized = normalizeCompanyDetail(card, detail);
       detailCacheRef.current.set(card.symbol, normalized);
-      setDetailCache((prev) => ({ ...prev, [card.symbol]: normalized }));
+      startTransition(() => {
+        setDetailCache((prev) => ({ ...prev, [card.symbol]: normalized }));
+      });
     });
   };
 
   const detailHeavyReady = detailHeavyReadySymbol === expandedSymbol;
 
-  /* ─── 副作用：详情延迟加载 ─── */
+  /* ─── 副作用：详情延迟挂载（startTransition 避免阻塞动画帧） ─── */
   useEffect(() => {
     if (!expandedSymbol) { setDetailMountedSymbol(null); return; }
-    // 方案1：延迟 1 帧挂载 InlineDetailContent，避免首帧阻塞动画
-    const raf = requestAnimationFrame(() => setDetailMountedSymbol(expandedSymbol));
+    const raf = requestAnimationFrame(() => {
+      startTransition(() => setDetailMountedSymbol(expandedSymbol));
+    });
     return () => cancelAnimationFrame(raf);
   }, [expandedSymbol]);
 

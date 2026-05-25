@@ -1,7 +1,7 @@
 "use client";
 
-import { memo } from "react";
-import { motion, type ComponentProps } from "motion/react";
+import { memo, type CSSProperties } from "react";
+import { motion } from "motion/react";
 import type { RecordCard, CardFaceRenderState } from "./types";
 
 /** 方案3：React.memo 避免展开/关闭时其他卡片不必要的 re-render */
@@ -14,7 +14,7 @@ export const CardFace = memo(function CardFace({
   card: RecordCard;
   state: CardFaceRenderState;
   className?: string;
-  style?: ComponentProps<typeof motion.div>["style"];
+  style?: CSSProperties;
 }) {
   return (
     <motion.div
