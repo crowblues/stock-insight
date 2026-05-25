@@ -1,5 +1,25 @@
 "use client";
 
+/**
+ * RecordGallery3D — 3D 透视卡片堆叠组件
+ *
+ * 架构说明：
+ * - Option C 一体化：卡片本身就是展开/收纳元素，无 overlay、无 DOM 交换
+ * - 方案B 动画层：关闭时在 preserve-3d 外部渲染动画卡片，overflow:hidden 有效
+ *   解决了 CSS 3D 上下文中白色区域穿模的问题
+ * - 弹簧动画（stiffness:68, damping:19, mass:0.98）用于展开/收纳
+ * - Tween 动画用于滚轮切换卡片
+ *
+ * 文件结构：
+ * - types.ts      → 所有类型定义
+ * - constants.ts  → 布局/动画常量（调参改这里）
+ * - data.ts       → 卡片数据（后期替换为 API）
+ * - layout.ts     → 布局计算 + 响应式工具函数
+ * - api.ts        → 数据加载 + fallback 生成
+ * - CardFace.tsx  → 卡片正面 UI
+ * - DetailContent.tsx → 展开详情页
+ */
+
 import { motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent, type WheelEvent as ReactWheelEvent } from "react";
 import type { RecordCard, CompanyDetailPayload, CardLayoutItem, RecordGallery3DProps } from "./types";
@@ -38,7 +58,6 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   const activeSinceRef = useRef(0);
   const lastScrollAtRef = useRef(0);
   const pendingActiveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const detailTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ─── 布局计算 ─── */
   const layout = useMemo((): CardLayoutItem[] => {
@@ -92,7 +111,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   const handleCardClick = (index: number, event: ReactMouseEvent<HTMLButtonElement>) => {
     const now = event.timeStamp;
     if (now - lastScrollAtRef.current < CLICK_AFTER_SCROLL_DELAY_MS) return;
-    if (detailTimerRef.current || expandedSymbol) return;
+    if (expandedSymbol) return;
 
     if (activeIndex !== index) {
       const card = CARDS[index];
@@ -263,7 +282,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     return () => { html.style.overflow = prev.ho; html.style.overscrollBehavior = prev.hob; body.style.overflow = prev.bo; body.style.overscrollBehavior = prev.bob; };
   }, []);
 
-  useEffect(() => { return () => { if (pendingActiveTimerRef.current) clearTimeout(pendingActiveTimerRef.current); if (detailTimerRef.current) clearTimeout(detailTimerRef.current); if (scrollFrameRef.current !== null) window.cancelAnimationFrame(scrollFrameRef.current); }; }, []);
+  useEffect(() => { return () => { if (pendingActiveTimerRef.current) clearTimeout(pendingActiveTimerRef.current); if (scrollFrameRef.current !== null) window.cancelAnimationFrame(scrollFrameRef.current); }; }, []);
 
   /* ─── 点击区域计算 ─── */
   const getHitMetrics = (item: (typeof clickableCards)[number]) => {
@@ -364,6 +383,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
                     key={card.symbol}
                     ref={(el) => { if (el) cardRefs.current.set(card.symbol, el); else cardRefs.current.delete(card.symbol); }}
                     data-card-symbol={card.symbol}
+                    data-card-active={isActive ? "true" : "false"}
                     className={`absolute select-none text-white${isExpanded ? " pointer-events-auto" : " pointer-events-none"}`}
                     initial={false}
                     animate={cardAnimate}

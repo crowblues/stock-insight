@@ -19,7 +19,6 @@ export const MAX_WHEEL_STEP = 1;
 export const MAX_TOUCH_STEP = 0.62;
 export const CLICK_AFTER_SCROLL_DELAY_MS = 140;
 export const CONFIRM_CLICK_DELAY_MS = 110;
-export const SWITCH_REOPEN_DELAY_MS = 50;
 
 /* 视觉参数 */
 export const EDGE_FADE_WIDTH = 0.86;
