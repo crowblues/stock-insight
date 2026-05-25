@@ -243,10 +243,12 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
       }
     };
 
-    /* Mac 触控板适配：deltaMode 0 = 像素级滚动（触控板），1 = 行级（鼠标） */
+    /* Mac/Win 触控板适配：deltaMode 0 = 像素级滚动（触控板），1 = 行级（鼠标） */
     const handleWheel = (event: WheelEvent) => {
       if (!section.contains(event.target as Node)) return;
       if ((event.target as Element | null)?.closest("[data-detail-scroll]")) return;
+      // 展开状态下放行所有 wheel 事件，让详情页原生滚动接管
+      if (detailOpenRef.current) return;
       if (event.cancelable) event.preventDefault();
       event.stopPropagation();
 
