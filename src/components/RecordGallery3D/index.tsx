@@ -338,7 +338,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
       id="companies"
       data-lenis-prevent
       className="relative flex h-[100svh] touch-none items-center justify-center overflow-hidden overscroll-none px-4 py-8 text-[#111]"
-      style={{ background: "linear-gradient(90deg, #c9dcb2 0%, #eef1dc 16%, #f5f3ed 50%, #e8f0cf 84%, #b7d392 100%)" }}
+      style={{ background: "linear-gradient(90deg, #c9dcb2 0%, #eef1dc 16%, #f5f3ed 50%, #e8f0cf 84%, #b7d392 100%)", touchAction: expandedSymbol || closingSymbol ? "pan-y" : undefined }}
     >
       <div className="pointer-events-none absolute left-0 top-0 h-full w-[18vw] min-w-40 bg-[linear-gradient(135deg,rgba(211,235,137,0.55),rgba(225,76,91,0.22)_48%,rgba(55,99,79,0.28))]" />
       <div className="pointer-events-none absolute right-0 top-0 h-full w-[18vw] min-w-40 bg-[linear-gradient(225deg,rgba(54,114,59,0.55),rgba(176,211,120,0.36)_50%,rgba(239,161,173,0.24))]" />
@@ -355,7 +355,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
         <div className="absolute left-1/2 top-[49%] z-10 w-full max-w-[940px] -translate-x-1/2 -translate-y-1/2">
           <div
             className="relative mx-auto h-full max-h-[650px] min-h-[520px] w-full touch-none overscroll-none"
-            style={{ perspective: getPerspective(), perspectiveOrigin: "50% 35%" }}
+            style={{ perspective: getPerspective(), perspectiveOrigin: "50% 35%", touchAction: expandedSymbol || closingSymbol ? "pan-y" : undefined }}
           >
             {/* ─── preserve-3d 堆叠层 ─── */}
             <div className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}>

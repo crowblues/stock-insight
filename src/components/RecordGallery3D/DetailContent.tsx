@@ -41,6 +41,7 @@ export function InlineDetailContent({
     >
       <div
         data-detail-scroll
+        data-lenis-prevent
         className="relative z-20 h-full touch-pan-y overflow-y-auto overscroll-contain"
         onWheel={onWheel}
         onTouchStart={onTouchStart}
