@@ -169,6 +169,20 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   const handleDetailTouchStart = (e: ReactTouchEvent<HTMLDivElement>) => { e.stopPropagation(); };
   const handleDetailTouchMove = (e: ReactTouchEvent<HTMLDivElement>) => { e.stopPropagation(); };
 
+  /* ─── 副作用：展开时手动接管详情页滚动（绕过 Mac 合成器限制） ─── */
+  useEffect(() => {
+    if (!expandedSymbol) return;
+    const scrollEl = document.querySelector<HTMLElement>('[data-detail-scroll]');
+    if (!scrollEl) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      scrollEl.scrollTop += e.deltaY;
+    };
+    scrollEl.addEventListener('wheel', onWheel, { passive: false });
+    return () => scrollEl.removeEventListener('wheel', onWheel);
+  }, [expandedSymbol]);
+
   /* ─── 数据预加载（startTransition 隔离 re-render，不打断动画） ─── */
   const warmCompanyDetail = (card: RecordCard) => {
     if (detailCacheRef.current.has(card.symbol)) {
