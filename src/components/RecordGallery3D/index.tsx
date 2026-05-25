@@ -218,6 +218,9 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   useEffect(() => {
     const section = sectionRef.current;
     if (!section) return;
+    // 展开状态下不注册 wheel/touch 监听，让 Mac 合成器线程自由启动原生滚动
+    const detailOpen = !!expandedSymbol || !!closingSymbol;
+    if (detailOpen) return;
 
     const commitScrollPosition = () => {
       scrollFrameRef.current = null;
@@ -234,7 +237,6 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
         clearTimeout(pendingActiveTimerRef.current);
         pendingActiveTimerRef.current = null;
       }
-      if (detailOpenRef.current) return;
       setHoveredIndex(null);
       setActiveIndex(null);
       setIsRouting(false);
@@ -247,8 +249,6 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     const handleWheel = (event: WheelEvent) => {
       if (!section.contains(event.target as Node)) return;
       if ((event.target as Element | null)?.closest("[data-detail-scroll]")) return;
-      // 展开状态下放行所有 wheel 事件，让详情页原生滚动接管
-      if (detailOpenRef.current) return;
       if (event.cancelable) event.preventDefault();
       event.stopPropagation();
 
@@ -301,7 +301,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
       section.removeEventListener("touchend", handleTouchEnd);
       section.removeEventListener("touchcancel", handleTouchEnd);
     };
-  }, [isRouting]);
+  }, [isRouting, expandedSymbol, closingSymbol]);
 
   /* ─── 副作用：锁定页面滚动 ─── */
   useEffect(() => {
