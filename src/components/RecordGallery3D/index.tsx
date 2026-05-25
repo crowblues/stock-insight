@@ -214,6 +214,15 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
   useEffect(() => { detailOpenRef.current = !!expandedSymbol || !!closingSymbol; }, [expandedSymbol, closingSymbol]);
   useEffect(() => { scrollPositionRef.current = scrollPosition; }, [scrollPosition]);
 
+  /* ─── 副作用：展开时暂停 Lenis，让 Mac 触控板原生滚动生效 ─── */
+  useEffect(() => {
+    if (expandedSymbol || closingSymbol) {
+      window.dispatchEvent(new Event("lenis-stop"));
+    } else {
+      window.dispatchEvent(new Event("lenis-start"));
+    }
+  }, [expandedSymbol, closingSymbol]);
+
   /* ─── 副作用：滚轮/触摸事件（Mac 触控板 + 手机适配） ─── */
   useEffect(() => {
     const section = sectionRef.current;

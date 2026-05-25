@@ -23,13 +23,23 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     // 让 ScrollTrigger 和 Lenis 同步
     lenis.on("scroll", () => ScrollTrigger.update());
 
+    // 允许其他组件暂停/恢复 Lenis（Mac 触控板滚动嵌套容器需要）
+    const handleStop = () => lenis.stop();
+    const handleStart = () => lenis.start();
+    window.addEventListener("lenis-stop", handleStop);
+    window.addEventListener("lenis-start", handleStart);
+
     function raf(time: number) {
       lenis.raf(time);
       requestAnimationFrame(raf);
     }
     requestAnimationFrame(raf);
 
-    return () => lenis.destroy();
+    return () => {
+      window.removeEventListener("lenis-stop", handleStop);
+      window.removeEventListener("lenis-start", handleStart);
+      lenis.destroy();
+    };
   }, []);
 
   return <>{children}</>;
