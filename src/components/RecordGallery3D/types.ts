@@ -1,5 +1,3 @@
-import type { MotionValue } from "motion/react";
-
 export type RecordCard = {
   symbol: string;
   name: string;
@@ -44,69 +42,7 @@ export type CompanyDetailPayload = {
   peRatio: number | null;
 };
 
-export type OverlayRect = {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-};
-
-export type CardLayoutItem = {
-  card: RecordCard;
-  index: number;
-  slot: number;
-  motionSlot: number;
-  opacity: number;
-  isClickableSlot: boolean;
-  y: number;
-  z: number;
-  width: number;
-  height: number;
-  tilt: number;
-  roll: number;
-};
-
-export type CardFaceMode = "stack" | "active" | "detail";
-
-export type CardVisualState = {
-  y: number;
-  z: number;
-  width: number;
-  height: number;
-  scaleX: number;
-  tilt: number;
-  roll: number;
-  zIndex: number;
-  opacity: number;
-  radius: number;
-  borderWidth: number;
-  borderOpacity: number;
-  shadowStrength: number;
-  imageScale: number;
-  compactTitleOpacity: number;
-  detailTitleOpacity: number;
-  metaOpacity: number;
-  descriptionOpacity: number;
-  hintOpacity: number;
-};
-
-type CardFaceNumberValue = number | MotionValue<number>;
-type CardFaceStringValue = string | MotionValue<string>;
-
-export type CardFaceRenderState = {
-  height: CardFaceNumberValue;
-  radius: CardFaceNumberValue;
-  borderWidth: CardFaceNumberValue;
-  borderColor: CardFaceStringValue;
-  boxShadow: CardFaceStringValue;
-  imageScale: CardFaceNumberValue;
-  compactTitleOpacity: CardFaceNumberValue;
-  detailTitleOpacity: CardFaceNumberValue;
-  metaOpacity: CardFaceNumberValue;
-  descriptionOpacity: CardFaceNumberValue;
-  descriptionY: CardFaceNumberValue;
-  hintOpacity: CardFaceNumberValue;
-};
+export type ActiveMode = "idle" | "peek" | "full";
 
 export type RecordGallery3DProps = {
   onBackToStart?: () => void;

@@ -17,7 +17,7 @@ export function InlineDetailContent({
   heavyReady: boolean;
   headerHeight: number;
   totalHeight: number;
-  onClose: () => void;
+  onClose: (e?: React.MouseEvent) => void;
   onWheel: (e: ReactWheelEvent<HTMLDivElement>) => void;
   onTouchStart: (e: ReactTouchEvent<HTMLDivElement>) => void;
   onTouchMove: (e: ReactTouchEvent<HTMLDivElement>) => void;
