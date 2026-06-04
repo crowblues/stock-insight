@@ -12,7 +12,7 @@ export default function HomeExperience({ initialEntered = false }: HomeExperienc
 
   if (hasEntered) {
     return (
-      <main className="h-screen overflow-hidden bg-[#0b0b0b] text-white">
+      <main className="h-screen overflow-hidden bg-cp-bg text-cp-ink">
         <RecordGallery3D
           onBackToStart={() => {
             window.history.replaceState(null, "", "/");
@@ -23,56 +23,119 @@ export default function HomeExperience({ initialEntered = false }: HomeExperienc
     );
   }
 
+  const handleEnter = () => setHasEntered(true);
+
   return (
-    <main className="h-screen overflow-hidden bg-[#0b0b0b] text-white">
-      <section
-        id="hero"
-        className="relative flex h-screen items-center justify-center overflow-hidden px-4 py-8"
-        style={{
-          background:
-            "linear-gradient(90deg, #c9dcb2 0%, #eff3dc 16%, #f6f4e8 50%, #eef4d8 84%, #b6d58f 100%)",
-        }}
-      >
-        <div className="pointer-events-none absolute left-0 top-0 h-full w-[20vw] min-w-44 overflow-hidden">
-          <div className="absolute -left-16 bottom-4 h-[72%] w-[120%] rotate-[-10deg] rounded-[45%] bg-[linear-gradient(130deg,rgba(214,232,115,0.78)_0%,rgba(244,239,195,0.86)_36%,rgba(221,65,80,0.56)_67%,rgba(80,104,60,0.34)_100%)] blur-[1px]" />
-          <div className="absolute left-12 top-[31%] h-[46%] w-8 rotate-[5deg] rounded-full bg-[#31452d]/70" />
-          <div className="absolute -left-3 bottom-20 h-24 w-48 rotate-[12deg] rounded-[50%] bg-[#e34c55]/70" />
+    <main className="min-h-screen w-full overflow-hidden bg-cp-bg text-cp-ink relative cp-paper-texture">
+      {/* 装饰几何（左上） */}
+      <div className="pointer-events-none absolute -left-24 -top-24 h-[420px] w-[420px] rounded-full bg-cp-pink/15 blur-3xl" />
+      <div className="pointer-events-none absolute left-12 top-32 h-3 w-3 rotate-45 bg-cp-yellow" />
+      <div className="pointer-events-none absolute left-44 top-56 h-2 w-2 rounded-full bg-cp-blue" />
+      <div className="pointer-events-none absolute left-8 top-1/2 h-px w-32 bg-cp-line-strong" />
+
+      {/* 装饰几何（右下） */}
+      <div className="pointer-events-none absolute -right-32 -bottom-32 h-[480px] w-[480px] rounded-full bg-cp-blue/15 blur-3xl" />
+      <div className="pointer-events-none absolute right-20 bottom-44 h-1 w-24 -rotate-12 bg-cp-purple" />
+      <div className="pointer-events-none absolute right-44 top-1/3 h-4 w-4 rounded-full border-2 border-cp-pink" />
+
+      {/* 顶部条 */}
+      <header className="relative z-10 flex items-center justify-between px-8 pt-6 font-mono text-[10px] uppercase tracking-[0.3em] text-cp-ink-soft">
+        <span className="flex items-center gap-2">
+          <span className="inline-block h-2 w-2 rounded-full bg-cp-pink" />
+          STOCK INSIGHT — FINANCIAL ANALYSIS MAG
+        </span>
+        <span>VOL.84 / 2026 JUN / ¥0</span>
+      </header>
+
+      {/* 主内容 */}
+      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-100px)] max-w-[1280px] flex-col items-center justify-center px-8 pt-8 pb-16">
+        <div className="mb-8 flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.4em] text-cp-ink-soft">
+          <div className="h-px w-12 bg-cp-line-strong" />
+          <span>CITY POP × FINANCE</span>
+          <span className="rounded-sm bg-cp-yellow/40 px-2 py-0.5 text-cp-ink">33⅓ RPM</span>
+          <div className="h-px w-12 bg-cp-line-strong" />
         </div>
 
-        <div className="pointer-events-none absolute right-0 top-0 h-full w-[20vw] min-w-44 overflow-hidden">
-          <div className="absolute -right-20 top-6 h-[66%] w-[130%] rotate-[16deg] rounded-[45%] bg-[linear-gradient(230deg,rgba(35,94,42,0.82)_0%,rgba(126,178,72,0.66)_44%,rgba(238,238,188,0.72)_72%,rgba(235,143,159,0.48)_100%)] blur-[1px]" />
-          <div className="absolute right-16 top-4 h-48 w-16 rotate-[22deg] rounded-full bg-[#4c7d35]/80" />
-          <div className="absolute -right-3 bottom-24 h-36 w-28 rotate-[-24deg] rounded-[48%] bg-[#eaa2b2]/60" />
+        <h1 className="text-center font-bold tracking-tight text-cp-ink leading-[0.9]">
+          <span className="block text-[clamp(3rem,8vw,6.5rem)]">
+            ストック·<span className="text-cp-pink">インサイト</span>
+          </span>
+          <span className="mt-3 block font-mono text-[clamp(0.8rem,1.4vw,1.1rem)] uppercase tracking-[0.5em] text-cp-ink-soft">
+            S T O C K &nbsp; I N S I G H T
+          </span>
+        </h1>
+
+        <p className="mt-6 max-w-2xl text-center text-base leading-relaxed text-cp-ink-soft md:text-lg">
+          像挑选唱片一样，浏览全球公司的财务报告。
+          <br />
+          每一家公司，都是一张值得收藏的封面。
+        </p>
+
+        <div className="mt-12 grid w-full max-w-3xl grid-cols-3 gap-4 md:gap-8">
+          <FeatureBadge num="A1" label="美股财报" desc="12 家精选" tint="pink" />
+          <FeatureBadge num="A2" label="可视图表" desc="ECharts 驱动" tint="blue" />
+          <FeatureBadge num="B1" label="3D 卡片" desc="像翻黑胶" tint="yellow" />
         </div>
 
-        <div className="relative z-10 flex h-[min(76vh,760px)] w-full max-w-[1320px] items-center justify-center bg-[#030613] shadow-[0_26px_70px_rgba(35,44,28,0.26)]">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_49%,rgba(246,71,102,0.12),transparent_15%),linear-gradient(180deg,rgba(255,255,255,0.02),transparent_18%,rgba(0,0,0,0.18))]" />
-
+        <div className="mt-14 flex items-center gap-6">
           <button
             type="button"
-            aria-label="Enter the chill zone"
-            onClick={() => setHasEntered(true)}
-            className="group relative flex -translate-y-4 flex-col items-center p-8 outline-none focus-visible:ring-2 focus-visible:ring-[#f95372]"
+            onClick={handleEnter}
+            className="group relative flex items-center gap-3 rounded-full bg-cp-ink px-8 py-4 font-mono text-sm font-semibold uppercase tracking-[0.2em] text-cp-bg shadow-[0_8px_24px_rgba(45,42,38,0.18)] transition hover:-translate-y-0.5 hover:bg-cp-pink hover:shadow-[0_12px_32px_rgba(232,120,138,0.35)]"
           >
-            <div className="relative h-[86px] w-[152px] transform-gpu rounded-[8px] bg-[#f65370] shadow-[0_0_26px_rgba(246,83,112,0.42),0_16px_40px_rgba(0,0,0,0.36)] transition-transform duration-200 ease-out will-change-transform group-hover:-translate-y-2 group-hover:scale-[1.13]">
-              <div className="absolute -top-9 left-[82px] h-11 w-px rotate-[-10deg] bg-[#42475b]" />
-              <div className="absolute left-5 top-4 h-4 w-[104px] rounded-sm bg-[#080a13]" />
-              <div className="absolute left-7 top-[21px] h-0.5 w-16 bg-[#f1b3c0]/80" />
-              <div className="absolute right-6 top-[20px] h-1.5 w-1.5 rounded-full bg-[#f1b3c0]" />
-              <div className="absolute bottom-5 left-7 grid grid-cols-5 gap-x-3 gap-y-2">
-                {Array.from({ length: 15 }).map((_, index) => (
-                  <span key={index} className="h-1.5 w-1.5 rounded-full bg-[#8e2033]/72" />
-                ))}
-              </div>
-              <div className="absolute bottom-[22px] right-5 h-7 w-7 rounded-full border border-[#ff9daf] bg-[#e94766] shadow-[inset_0_2px_8px_rgba(255,255,255,0.25)]" />
-            </div>
-
-            <span className="mt-8 font-mono text-[11px] font-semibold uppercase tracking-[0.34em] text-[#f65370]/60 transition group-hover:text-[#ff7590]">
-              Enter the chill zone
-            </span>
+            <span>BROWSE THE COLLECTION</span>
+            <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
           </button>
+          <span className="hidden font-mono text-xs uppercase tracking-[0.25em] text-cp-ink-soft md:inline">
+            CLICK TO ENTER
+          </span>
+        </div>
+
+        <div className="mt-16 flex items-center gap-6 font-mono text-[10px] uppercase tracking-[0.3em] text-cp-ink-soft">
+          <span>SIDE A · OVERVIEW</span>
+          <span className="h-px w-8 bg-cp-line-strong" />
+          <span>SIDE B · DETAILS</span>
         </div>
       </section>
+
+      <footer className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-between border-t border-cp-line px-8 py-4 font-mono text-[10px] uppercase tracking-[0.3em] text-cp-ink-soft">
+        <span>EST. 2026</span>
+        <div className="flex items-center gap-4">
+          <span className="h-2 w-2 rounded-full bg-cp-up" />
+          <span>MARKET OPEN</span>
+          <span className="h-px w-12 bg-cp-line-strong" />
+          <span>NYC · TOKYO · BERLIN</span>
+        </div>
+        <span>★ ★ ★</span>
+      </footer>
     </main>
+  );
+}
+
+function FeatureBadge({
+  num,
+  label,
+  desc,
+  tint,
+}: {
+  num: string;
+  label: string;
+  desc: string;
+  tint: "pink" | "blue" | "yellow";
+}) {
+  const tintClass = {
+    pink: "bg-cp-pink/15 border-cp-pink/40",
+    blue: "bg-cp-blue/15 border-cp-blue/40",
+    yellow: "bg-cp-yellow/20 border-cp-yellow/50",
+  }[tint];
+
+  return (
+    <div className={`relative flex flex-col items-start gap-1 rounded-2xl border ${tintClass} px-5 py-4 backdrop-blur-sm`}>
+      <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-cp-ink-soft">
+        TRACK {num}
+      </span>
+      <span className="text-base font-bold text-cp-ink">{label}</span>
+      <span className="text-xs text-cp-ink-soft">{desc}</span>
+    </div>
   );
 }

@@ -28,7 +28,7 @@ export function InlineDetailContent({
 
   return (
     <div
-      className="relative z-20 -mt-[1px] overflow-hidden border border-[#d7d8cd] bg-[#f8f7f2] text-[#20231d]"
+      className="relative z-20 -mt-[1px] overflow-hidden border border-[#e8e0d4] bg-[#fdf6ec] text-[#2d2a26]"
       style={{
         flex: "1 1 0",
         minHeight: 0,
@@ -36,7 +36,7 @@ export function InlineDetailContent({
         borderTopRightRadius: 0,
         borderBottomLeftRadius: 12,
         borderBottomRightRadius: 12,
-        boxShadow: "0 24px 70px rgba(36,39,30,0.24), 0 1px 0 rgba(255,255,255,0.7) inset",
+        boxShadow: "0 24px 70px rgba(45,42,38,0.18), 0 1px 0 rgba(255,255,255,0.7) inset",
       }}
     >
       <div
@@ -49,33 +49,33 @@ export function InlineDetailContent({
         onTouchMove={onTouchMove}
       >
         <header className="px-5 pb-5 pt-6 text-center sm:px-8 sm:pt-7">
-          <div className="mb-4 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-[#62645d]">
-            <span>Stock Insight Archive</span>
+          <div className="mb-4 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-cp-ink-soft">
+            <span>◈ SIDE B · LINER NOTES</span>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-[5px] bg-[#57584f] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-white shadow-[0_8px_16px_rgba(0,0,0,0.16)] transition hover:bg-[#34362f]"
+              className="rounded-full bg-cp-pink px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-white shadow-[0_8px_16px_rgba(232,120,138,0.3)] transition hover:bg-[#d4607a]"
             >
               Back
             </button>
           </div>
-          <div className="relative mx-auto flex h-32 w-full max-w-[420px] items-center justify-center overflow-hidden bg-[#090a0a] shadow-[0_18px_42px_rgba(0,0,0,0.24)] sm:h-40">
-            <div className="absolute h-full w-full max-w-[420px] bg-[radial-gradient(circle_at_68%_40%,rgba(255,255,255,0.22),transparent_22%),linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0)_42%),linear-gradient(90deg,#070909,#171a18)]" />
+          <div className="relative mx-auto flex h-32 w-full max-w-[420px] items-center justify-center overflow-hidden rounded-2xl bg-[#2d2a26] shadow-[0_18px_42px_rgba(45,42,38,0.22)] sm:h-40">
+            <div className="absolute h-full w-full max-w-[420px] bg-[radial-gradient(circle_at_68%_40%,rgba(232,120,138,0.25),transparent_30%),linear-gradient(135deg,rgba(242,201,76,0.10),rgba(107,184,196,0)_42%),linear-gradient(90deg,#2d2a26,#3a352e)]" />
             {profile?.image && (
-              <img src={profile.image} alt="" className="relative z-10 h-14 w-14 rounded-[6px] bg-white object-contain p-2 shadow-[0_14px_36px_rgba(0,0,0,0.28)] sm:h-16 sm:w-16" />
+              <img src={profile.image} alt="" className="relative z-10 h-14 w-14 rounded-xl bg-white object-contain p-2 shadow-[0_14px_36px_rgba(0,0,0,0.28)] sm:h-16 sm:w-16" />
             )}
             <div className="relative z-10 ml-4 text-left sm:ml-5">
-              <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/45 sm:text-[11px]">{profile?.symbol ?? card.symbol}</p>
-              <p className="mt-1.5 max-w-[220px] text-lg font-semibold leading-tight text-white sm:mt-2 sm:max-w-[260px] sm:text-xl">{profile?.companyName ?? card.sub}</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-cp-yellow/80 sm:text-[11px]">{profile?.symbol ?? card.symbol}</p>
+              <p className="mt-1.5 max-w-[220px] text-lg font-semibold leading-tight text-[#fdf6ec] sm:mt-2 sm:max-w-[260px] sm:text-xl">{profile?.companyName ?? card.sub}</p>
             </div>
           </div>
-          <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.28em] text-[#9c9f74] sm:mt-5">
+          <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.28em] text-cp-pink sm:mt-5">
             {profile?.sector || "Company Research"} / {profile?.industry || "Analysis"}
           </p>
-          <h1 className="mx-auto mt-2 max-w-[620px] text-[clamp(1.4rem,3.2vw,2.9rem)] font-bold leading-[0.98] text-[#7d8178]">
+          <h1 className="mx-auto mt-2 max-w-[620px] text-[clamp(1.4rem,3.2vw,2.9rem)] font-bold leading-[0.98] text-cp-ink">
             {profile?.companyName ?? card.sub}
           </h1>
-          <p className="mx-auto mt-3 max-w-[560px] text-xs leading-5 text-[#5b5e57] sm:text-sm sm:leading-6">
+          <p className="mx-auto mt-3 max-w-[560px] text-xs leading-5 text-cp-ink-soft sm:text-sm sm:leading-6">
             {profile?.description || card.desc}
           </p>
         </header>
@@ -109,30 +109,33 @@ export function InlineDetailContent({
 
 function FinancialChartPlaceholder() {
   return (
-    <div className="border border-[#dcddd2] bg-[#f8f7f2] px-5 py-5 text-[#3e4239]">
-      <div className="mb-4 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-[#898b82]">
+    <div className="rounded-xl border border-cp-line bg-cp-paper px-5 py-5 text-cp-ink">
+      <div className="mb-4 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-cp-ink-soft">
         <span>Financial modules</span>
         <span>Loading data</span>
       </div>
-      <div className="grid grid-cols-6 items-end gap-2 border border-[#e0dfd5] bg-[#fdfcf7] p-4">
-        {[34, 52, 45, 68, 61, 78].map((height, index) => (
-          <div key={index} className="flex h-28 items-end border-l border-[#ece9de] pl-1">
-            <div className="w-full bg-[#69715e]" style={{ height: `${height}%`, opacity: 0.52 + index * 0.055 }} />
-          </div>
-        ))}
+      <div className="grid grid-cols-6 items-end gap-2 rounded-lg border border-cp-line bg-cp-bg p-4">
+        {[34, 52, 45, 68, 61, 78].map((height, index) => {
+          const colors = ["#e8788a", "#6bb8c4", "#f2c94c", "#9b8ec4", "#7ecba1", "#e8788a"];
+          return (
+            <div key={index} className="flex h-28 items-end">
+              <div className="w-full rounded-t" style={{ height: `${height}%`, background: colors[index], opacity: 0.7 }} />
+            </div>
+          );
+        })}
       </div>
-      <p className="mt-3 text-center font-mono text-[9px] uppercase tracking-[0.2em] text-[#98998e]">
-        Revenue / margin / EPS charts will appear here when data is available
+      <p className="mt-3 text-center font-mono text-[9px] uppercase tracking-[0.2em] text-cp-ink-soft">
+        营收 / 利润率 / EPS 图表将在数据就绪后显示
       </p>
     </div>
   );
 }
 
 function MetricCard({ label, value, tone }: { label: string; value: string; tone?: "up" | "down" }) {
-  const toneClass = tone === "up" ? "text-[#267c4a]" : tone === "down" ? "text-[#bd3850]" : "text-[#1f221d]";
+  const toneClass = tone === "up" ? "text-[#5ba07a]" : tone === "down" ? "text-[#d4605a]" : "text-cp-ink";
   return (
-    <div className="rounded-[4px] border border-[#dcddd2] bg-[#f8f7f2] px-3 py-2.5">
-      <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#898b82]">{label}</div>
+    <div className="rounded-xl border border-cp-line bg-cp-paper px-3 py-2.5">
+      <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-cp-ink-soft">{label}</div>
       <div className={`mt-1 truncate text-sm font-bold ${toneClass}`}>{value}</div>
     </div>
   );

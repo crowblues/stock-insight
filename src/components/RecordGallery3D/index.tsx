@@ -99,7 +99,7 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     }
   }, []);
 
-  /* ─── wheel + touch 事件 ─── */
+  /* ─── wheel + touch 事件（与 MyChill 一致，无 snap） ─── */
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       // 展开时不拦截 wheel → 详情页自然滚动
@@ -166,17 +166,23 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
     <section
       id="companies"
       className="relative flex h-[100svh] items-center justify-center overflow-hidden"
-      style={{ background: "linear-gradient(180deg, #0b0b0b 0%, #131313 100%)" }}
+      style={{ background: "linear-gradient(180deg, #fdf6ec 0%, #f5ede0 100%)" }}
     >
+      {/* 唱片店招牌（顶部） */}
+      <div className="pointer-events-none absolute left-1/2 top-6 z-40 -translate-x-1/2 font-mono text-[10px] uppercase tracking-[0.4em] text-cp-ink-soft">
+        ◈ THE COLLECTION · SIDE A ◈
+      </div>
+
       {onBackToStart && (
         <button
           type="button"
           onClick={onBackToStart}
-          className="absolute left-5 top-5 z-50 rounded-md bg-white/10 px-4 py-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-white/70 backdrop-blur-sm transition hover:bg-white/20"
+          className="absolute left-5 top-5 z-50 rounded-full border border-cp-line bg-white/70 px-4 py-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-cp-ink-soft backdrop-blur-sm transition hover:border-cp-pink hover:text-cp-pink"
         >
           ← Back
         </button>
       )}
+
 
       <div className="relative" style={{ width: CARD_W, height: STAGE_H }}>
         {slots.map((s) => {
@@ -237,33 +243,44 @@ export default function RecordGallery3D({ onBackToStart }: RecordGallery3DProps)
               }}
               style={{ pointerEvents: activeCardId !== null && !isActive ? "none" : "all" }}
             >
-              {/* 卡片正面 */}
+              {/* 卡片正面 —— City Pop 唱片封套 */}
               <div
-                className="relative h-full w-full overflow-hidden"
+                className="relative h-full w-full overflow-hidden rounded-xl"
                 style={{
-                  backgroundImage: `linear-gradient(90deg, rgba(4,5,5,0.97) 0%, rgba(8,9,10,0.88) 46%, rgba(10,12,12,0.74) 100%), url(${card.image})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
+                  background: "#faf3e3",
+                  border: `2px solid ${card.tint}`,
                 }}
               >
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0)_42%,rgba(0,0,0,0.2))]" />
-                <div className="absolute right-3 top-2 rounded-[4px] px-2 py-0.5 font-mono text-[10px] font-bold text-[#101211]" style={{ backgroundColor: card.tint }}>
+                {/* 左侧色条（唱片脊背） */}
+                <div className="absolute left-0 top-0 h-full w-1.5" style={{ background: card.tint }} />
+                {/* 唱片编号（右上角） */}
+                <div className="absolute right-3 top-2 font-mono text-[9px] uppercase tracking-[0.2em] text-cp-ink-soft">
+                  No.{String(albumIndex + 1).padStart(2, "0")}
+                </div>
+                {/* 涨跌标签 */}
+                <div
+                  className="absolute right-3 bottom-2 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold"
+                  style={{
+                    backgroundColor: card.change.startsWith("-") ? "rgba(212,96,90,0.15)" : "rgba(91,160,122,0.15)",
+                    color: card.change.startsWith("-") ? "#d4605a" : "#5ba07a",
+                  }}
+                >
                   {card.change}
                 </div>
-                <div className="relative flex h-full items-center gap-3 px-4">
-                  <img src={card.image} alt="" className="h-12 w-12 shrink-0 rounded-[4px] object-cover" />
+                <div className="relative flex h-full items-center gap-4 pl-6 pr-4">
+                  <img src={card.image} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover shadow-md" />
                   <div className="min-w-0 flex-1">
-                    <div className="mb-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-white/50">
+                    <div className="mb-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-cp-ink-soft">
                       {card.symbol} · {card.sub}
                     </div>
-                    <h3 className="truncate text-sm font-bold text-white">{card.name}</h3>
-                    <p className="mt-1 truncate text-xs text-white/60">{card.desc}</p>
+                    <h3 className="truncate text-base font-bold text-cp-ink">{card.name}</h3>
+                    <p className="mt-1 truncate text-xs text-cp-ink-soft">{card.desc}</p>
                   </div>
                 </div>
                 {/* Peek 预览条 */}
                 {isPeek && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/40 px-4 py-2 backdrop-blur-sm">
-                    <p className="truncate text-xs text-white/80">Click again to expand · {card.tags.join(" · ")}</p>
+                  <div className="absolute bottom-0 left-0 right-0 border-t border-cp-line bg-cp-paper/90 px-6 py-2 backdrop-blur-sm">
+                    <p className="truncate text-xs text-cp-ink-soft">再次点击展开 · {card.tags.join(" · ")}</p>
                   </div>
                 )}
               </div>

@@ -1,184 +1,135 @@
 @import "tailwindcss";
 
 /**
- * 深色宇宙风主题
- * 参考 cosmic AI landing page 风格
+ * City Pop 设计系统
+ * 灵感：80/90 年代日本唱片店、City Pop 专辑封面
+ * 核心比喻：像挑唱片一样看财报
  */
 :root {
-  --background: #0a0a0a;
-  --foreground: #f5f5f5;
+  /* 背景层 */
+  --cp-bg: #fdf6ec;          /* 暖奶白 */
+  --cp-bg-alt: #f5ede0;      /* 淡米色 */
+  --cp-paper: #faf3e3;       /* 唱片内页纸 */
+
+  /* 强调色 */
+  --cp-pink: #e8788a;        /* City Pop 粉 */
+  --cp-blue: #6bb8c4;        /* 复古天蓝 */
+  --cp-yellow: #f2c94c;      /* 暖日落黄 */
+  --cp-purple: #9b8ec4;      /* 淡薰衣草 */
+  --cp-mint: #7ecba1;        /* 薄荷绿 */
+
+  /* 文字 */
+  --cp-ink: #2d2a26;         /* 暖深棕 */
+  --cp-ink-soft: #7a7067;    /* 暖灰棕 */
+
+  /* 涨跌 */
+  --cp-up: #5ba07a;          /* 复古绿 */
+  --cp-down: #d4605a;        /* 柔和红 */
+
+  /* 边框 */
+  --cp-line: #e8e0d4;        /* 淡暖灰 */
+  --cp-line-strong: #c9bfae; /* 深一点的边框 */
+
+  /* 兼容旧主题 */
+  --background: var(--cp-bg);
+  --foreground: var(--cp-ink);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-cp-bg: var(--cp-bg);
+  --color-cp-bg-alt: var(--cp-bg-alt);
+  --color-cp-paper: var(--cp-paper);
+  --color-cp-pink: var(--cp-pink);
+  --color-cp-blue: var(--cp-blue);
+  --color-cp-yellow: var(--cp-yellow);
+  --color-cp-purple: var(--cp-purple);
+  --color-cp-mint: var(--cp-mint);
+  --color-cp-ink: var(--cp-ink);
+  --color-cp-ink-soft: var(--cp-ink-soft);
+  --color-cp-up: var(--cp-up);
+  --color-cp-down: var(--cp-down);
+  --color-cp-line: var(--cp-line);
   --font-sans: var(--font-geist-sans);
   --font-serif: var(--font-serif);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--cp-bg);
+  color: var(--cp-ink);
+  font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans CJK JP", sans-serif;
   overflow-x: hidden;
 }
 
-/* 滚动条 */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #555; }
+/* 滚动条（暖色版） */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--cp-bg-alt); }
+::-webkit-scrollbar-thumb { background: var(--cp-line-strong); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--cp-ink-soft); }
 
 ::selection {
-  background: rgba(99, 102, 241, 0.3);
-  color: #fff;
+  background: var(--cp-pink);
+  color: white;
 }
 
 /* Lenis */
 html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }
 
-/* 宇宙旋转动画 */
-@keyframes spin-slow {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to { transform: translate(-50%, -50%) rotate(360deg); }
+/* ─── 装饰几何图形（City Pop 标志） ─── */
+@keyframes cp-rotate {
+  to { transform: rotate(360deg); }
 }
-@keyframes spin-reverse {
-  from { transform: translate(-50%, -50%) rotate(360deg); }
-  to { transform: translate(-50%, -50%) rotate(0deg); }
-}
-.animate-spin-slow { animation: spin-slow 30s linear infinite; }
-.animate-spin-reverse { animation: spin-reverse 20s linear infinite; }
+.cp-spin-slow { animation: cp-rotate 40s linear infinite; }
+.cp-spin-reverse { animation: cp-rotate 30s linear infinite reverse; }
 
+/* ─── 唱片店纸质纹理 ─── */
+.cp-paper-texture {
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(232, 120, 138, 0.04), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(107, 184, 196, 0.04), transparent 40%);
+}
+
+/* ─── 报告页旧动画（暂保留，等改详情页时替换） ─── */
 @keyframes report-stage-in {
-  from {
-    opacity: 0;
-    transform: translateY(14px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
-
 @keyframes report-stage-out {
-  from {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(16px) scale(0.972);
-  }
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(16px) scale(0.972); }
 }
-
 @keyframes report-panel-in {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 28px, 0) scale(0.94);
-    filter: blur(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-    filter: blur(0);
-  }
+  from { opacity: 0; transform: translate3d(0, 28px, 0) scale(0.94); filter: blur(10px); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
 }
-
 @keyframes report-panel-out {
-  from {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-    filter: blur(0);
-  }
-  to {
-    opacity: 0;
-    transform: translate3d(0, 22px, 0) scale(0.955);
-    filter: blur(8px);
-  }
+  from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+  to { opacity: 0; transform: translate3d(0, 22px, 0) scale(0.955); filter: blur(8px); }
 }
-
-@keyframes report-layer-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -46%) rotate(0deg) scale(0.92);
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.report-stage-inner {
-  animation: report-stage-in 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
+.report-stage-inner { animation: report-stage-in 620ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 .report-panel {
-  border-radius: 7px;
+  border-radius: 12px;
   transform-origin: 50% 62%;
   animation: report-panel-in 680ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
   will-change: transform, opacity, filter;
 }
-
 @keyframes report-loading-sweep {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(320%);
-  }
+  from { transform: translateX(0); }
+  to { transform: translateX(320%); }
 }
+.report-loading-panel { border-radius: 12px; transform-origin: 50% 62%; will-change: transform, opacity; }
+.report-loading-sweep { animation: report-loading-sweep 1.7s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+.report-back-button { animation: report-stage-in 560ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both; }
 
-.report-loading-panel {
-  border-radius: 7px;
-  transform-origin: 50% 62%;
-  will-change: transform, opacity;
-}
-
-.report-loading-sweep {
-  animation: report-loading-sweep 1.7s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-}
-
-.report-depth-layer {
-  border-radius: 7px;
-  transform-origin: 50% 55%;
-  animation: report-layer-in 760ms cubic-bezier(0.16, 1, 0.3, 1) 40ms both;
-}
-
-.report-depth-layer-a {
-  opacity: 0.88;
-}
-
-.report-depth-layer-b {
-  opacity: 0.92;
-}
-
-.report-back-button {
-  animation: report-stage-in 560ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
-}
-
-.report-stage-leaving .report-stage-inner {
-  animation: report-stage-out 300ms cubic-bezier(0.4, 0, 1, 1) both;
-}
-
-.report-stage-leaving .report-panel {
-  animation: report-panel-out 280ms cubic-bezier(0.4, 0, 1, 1) both;
-}
-
-.report-stage-leaving .report-back-button {
-  opacity: 0;
-  transform: translateY(6px) scale(0.98);
-  transition: opacity 220ms ease, transform 220ms ease;
-}
+.report-stage-leaving .report-stage-inner { animation: report-stage-out 300ms cubic-bezier(0.4, 0, 1, 1) both; }
+.report-stage-leaving .report-panel { animation: report-panel-out 280ms cubic-bezier(0.4, 0, 1, 1) both; }
 
 @media (prefers-reduced-motion: reduce) {
-  .report-stage-inner,
-  .report-panel,
-  .report-loading-sweep,
-  .report-depth-layer,
-  .report-back-button,
-  .report-stage-leaving .report-stage-inner,
-  .report-stage-leaving .report-panel {
+  .report-stage-inner, .report-panel, .report-loading-sweep, .report-back-button,
+  .cp-spin-slow, .cp-spin-reverse {
     animation: none;
   }
 }

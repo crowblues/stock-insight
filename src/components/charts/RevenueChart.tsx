@@ -1,16 +1,14 @@
 /**
- * 营收与净利润趋势图（柱状图）
- * 
+ * 营收与净利润趋势图（柱状图）—— City Pop 配色
+ *
  * X轴：年份（从旧到新，左到右）
  * Y轴：金额
  * 蓝色柱子 = 营收，绿色柱子 = 净利润
- * 鼠标悬停显示具体数值
  */
-"use client"; // ECharts 需要浏览器环境，必须是客户端组件
+"use client";
 
 import ReactECharts from "echarts-for-react";
 
-// 定义组件接收的数据格式
 interface RevenueChartProps {
   data: {
     fiscalYear: string;
@@ -20,14 +18,14 @@ interface RevenueChartProps {
 }
 
 export default function RevenueChart({ data }: RevenueChartProps) {
-  // 反转数据顺序：FMP 返回最新在前，图表需要最旧在左
   const reversed = [...data].reverse();
 
-  // ECharts 配置项
   const option = {
-    // 提示框：鼠标悬停时显示
     tooltip: {
       trigger: "axis" as const,
+      backgroundColor: "#fdf6ec",
+      borderColor: "#e8e0d4",
+      textStyle: { color: "#2d2a26" },
       formatter: (params: Array<{ seriesName: string; value: number; axisValue: string }>) => {
         const year = params[0].axisValue;
         let html = `<strong>${year}年</strong><br/>`;
@@ -38,42 +36,42 @@ export default function RevenueChart({ data }: RevenueChartProps) {
         return html;
       },
     },
-    // 图例
-    legend: { data: ["营收", "净利润"], top: 0, textStyle: { color: "#a0a0a0" } },
-    // 网格（留出边距）
+    legend: { data: ["营收", "净利润"], top: 0, textStyle: { color: "#7a7067" } },
     grid: { left: "3%", right: "4%", bottom: "3%", containLabel: true },
-    // X轴：年份
-    xAxis: { type: "category" as const, data: reversed.map((d) => d.fiscalYear), axisLabel: { color: "#a0a0a0" } },
-    // Y轴：金额（自动格式化为B）
+    xAxis: {
+      type: "category" as const,
+      data: reversed.map((d) => d.fiscalYear),
+      axisLabel: { color: "#7a7067" },
+      axisLine: { lineStyle: { color: "#e8e0d4" } },
+    },
     yAxis: {
       type: "value" as const,
       axisLabel: {
         formatter: (val: number) => `$${(val / 1_000_000_000).toFixed(0)}B`,
-        color: "#a0a0a0",
+        color: "#7a7067",
       },
-      splitLine: { lineStyle: { color: "#2a2a2a" } },
+      splitLine: { lineStyle: { color: "#e8e0d4" } },
     },
-    // 数据系列
     series: [
       {
         name: "营收",
         type: "bar",
         data: reversed.map((d) => d.revenue),
-        itemStyle: { color: "#3b82f6" }, // 蓝色
+        itemStyle: { color: "#6bb8c4", borderRadius: [4, 4, 0, 0] },
       },
       {
         name: "净利润",
         type: "bar",
         data: reversed.map((d) => d.netIncome),
-        itemStyle: { color: "#10b981" }, // 绿色
+        itemStyle: { color: "#7ecba1", borderRadius: [4, 4, 0, 0] },
       },
     ],
   };
 
   return (
-    <div className="bg-[#141414] p-4 rounded-lg border border-[#2a2a2a]">
-      <h3 className="text-sm font-medium text-gray-400 mb-2">营收与净利润趋势</h3>
-      <ReactECharts option={option} style={{ height: "280px" }} theme="dark" />
+    <div className="rounded-xl border border-cp-line bg-cp-paper p-4">
+      <h3 className="mb-2 text-sm font-medium text-cp-ink-soft">营收与净利润趋势</h3>
+      <ReactECharts option={option} style={{ height: "280px" }} />
     </div>
   );
 }

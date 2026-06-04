@@ -20,7 +20,7 @@ export const TRANSITION_CONFIG = {
   duration: 0.45,
 };
 
-/* ─── 滚动 ─── */
+/* ─── 滚动（与 MyChill 完全一致） ─── */
 export const SCROLL_LERP = 0.13;
 export const WHEEL_SENSITIVITY = 0.7;
 export const TOUCH_SENSITIVITY = 1.1;
